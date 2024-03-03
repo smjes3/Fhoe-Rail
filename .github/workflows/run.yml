@@ -38,6 +38,19 @@ jobs:
           xcopy /E /I /Y .\picture\ .\dist\Fhoe-Rail\picture\
           xcopy /Y .\README.md .\dist\Fhoe-Rail\
 
+      - name: Extract tag name
+        if: startsWith(github.ref, 'refs/tags/')
+        id: extract_tag
+        run: echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+
+      - name: Add version to version.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $tag = "${{ steps.extract_tag.outputs.tag }}"
+          $versionJson = Get-Content -Raw version.json | ConvertFrom-Json
+          $versionJson.version = $tag
+          $versionJson | ConvertTo-Json | Set-Content version.json
+
       - name: Upload artifact
         if: startsWith(github.ref, 'refs/heads/') || startsWith(github.ref, 'refs/pull/')
         uses: actions/upload-artifact@v3
@@ -58,4 +71,3 @@ jobs:
           files: |
            ./dist/Fhoe-Rail.zip
 #          prerelease: true
-
