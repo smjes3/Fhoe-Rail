@@ -23,7 +23,7 @@ def up_data():
     
     
     for file in star_path.rglob('*'):
-        if '.git' not in str(file) and '__' not in str(file) and 'version.json' not in str(file) and 'star_list.json' not in str(file) and os.path.isfile(file):
+        if 'logs' not in str(file) and '.git' not in str(file) and '__' not in str(file) and 'version.json' not in str(file) and 'star_list.json' not in str(file) and os.path.isfile(file):
             star_list.append({
                 'path': str(file).replace(this_path, '').replace('\\', '/').lstrip('/'),
                 'hash': hashlib.md5(file.read_bytes()).hexdigest()
@@ -36,7 +36,7 @@ def up_data():
     current_time = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
     
     # 生成版本号
-    version = current_time.strftime("%Y%m%d%H%M%S")
+    version = current_time.strftime("%m%d%H%M")
     
     # 创建版本号字典
     version_dict = {
