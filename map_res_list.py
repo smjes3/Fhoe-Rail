@@ -12,7 +12,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from docopt import docopt
+# from docopt import docopt
 
 def up_data():
     star_path = Path(__file__).parent
@@ -63,9 +63,10 @@ def str_replace(find_str, replace_str):
             f_new.write(content)
     
 if __name__ == '__main__':
-    args = docopt(__doc__)
-    if args.get("--type", "") == "replace":
-        str_replace(args["--find_str"], args["--replace_str"])
-    else:
-        up_data()
+    # args = docopt(__doc__)
+    # if args.get("--type", "") == "replace":
+    #     str_replace(args["--find_str"], args["--replace_str"])
+    # else:
+    #     up_data()
+    up_data()
         
