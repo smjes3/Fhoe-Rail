@@ -31,25 +31,22 @@ jobs:
         run: |
           pyinstaller -D --distpath .\dist\ -i .\logo.ico --contents-directory libraries --uac-admin -n "Fhoe-Rail" Honkai_Star_Rail.py -y
 
+      - name: Add version to version.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $tag = '${{ github.ref }}'
+          $version = ($tag -split "/")[-1]
+          $versionJson = Get-Content -Raw .\version.json | ConvertFrom-Json
+          $versionJson.version = $version
+          $versionJson | ConvertTo-Json | Set-Content -Path .\version.json
+
       - name: Move assets to dist directory
         run: |
           xcopy /E /I /Y .\map\ .\dist\Fhoe-Rail\map\
           xcopy /E /I /Y .\map_data\ .\dist\Fhoe-Rail\map_data\
           xcopy /E /I /Y .\picture\ .\dist\Fhoe-Rail\picture\
           xcopy /Y .\README.md .\dist\Fhoe-Rail\
-
-      - name: Extract tag name
-        if: startsWith(github.ref, 'refs/tags/')
-        id: extract_tag
-        run: echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
-
-      - name: Add version to version.json
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          $tag = "${{ steps.extract_tag.outputs.tag }}"
-          $versionJson = Get-Content -Raw version.json | ConvertFrom-Json
-          $versionJson.version = $tag
-          $versionJson | ConvertTo-Json | Set-Content version.json
+          xcopy /Y .\version.json .\dist\Fhoe-Rail\
 
       - name: Upload artifact
         if: startsWith(github.ref, 'refs/heads/') || startsWith(github.ref, 'refs/pull/')
