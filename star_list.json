@@ -4,20 +4,16 @@
     "hash": "0a30e8d4908c43e9070752d8619cec9e"
   },
   {
-    "path": "config.json",
-    "hash": "3fa7a9815763f0c53f9e4fa6200b2873"
-  },
-  {
     "path": "get_width.py",
-    "hash": "6b5529f4c8e0b38e912e34d2c98a2e16"
+    "hash": "ee64ff3d30a14d3739f5ad8960f89d3f"
   },
   {
     "path": "Honkai_Star_Rail.py",
-    "hash": "81254a5bb53fe8e98f74fd6336d02aae"
+    "hash": "7a22e9c10eb8507ca37af6b627acecf0"
   },
   {
     "path": "LICENSE",
-    "hash": "1ebbd3e34237af26da5dc08a4e440464"
+    "hash": "e62637ea8a114355b985fd86c9ffbd6e"
   },
   {
     "path": "logo.ico",
@@ -25,23 +21,23 @@
   },
   {
     "path": "map_res_list.py",
-    "hash": "9698549371790db64bf1299d977c722b"
+    "hash": "8784e3d15af8c77a1c20ec453332c3cf"
   },
   {
     "path": "map_simplify.py",
-    "hash": "5d14d56ef1014f4d95e07ce4add6bb1b"
+    "hash": "f34b4915eccce5b8408919978c8d3482"
   },
   {
     "path": "README.md",
-    "hash": "60f3407680c0af799d4d1fe640f7116b"
+    "hash": "3c7740da96d7162853d4aae457db22ba"
   },
   {
     "path": "requirements.txt",
-    "hash": "afc0b0d78e91f70316e49dd3d203a90d"
+    "hash": "70cff505de8648dbabfa3917cb8afdc1"
   },
   {
     "path": "test.py",
-    "hash": "8a3f77448965f28cdbd6dbb437765a48"
+    "hash": "f2c43b06a927a61bea5b35866490b5f3"
   },
   {
     "path": "点这里啦.exe",
@@ -49,7 +45,7 @@
   },
   {
     "path": "map/map_1-1_0.json",
-    "hash": "c4caa0fc0eb78c5d3e12cd74307c87c7"
+    "hash": "b783d5460e7f9edcf89e728e37ae178b"
   },
   {
     "path": "map/map_1-1_1.json",
@@ -85,11 +81,11 @@
   },
   {
     "path": "map/map_1-4_1.json",
-    "hash": "412b894e73f0f2fb7f11099aad844158"
+    "hash": "67f24f33a29b49a129f17be80392e14e"
   },
   {
     "path": "map/map_1-4_2.json",
-    "hash": "4c8c08b31827a4a86514b4abb9d8fa4c"
+    "hash": "6b2112dd51bfa1749feba9d96200a502"
   },
   {
     "path": "map/map_2-1_1.json",
@@ -269,11 +265,11 @@
   },
   {
     "path": "map/map_3-5_1.json",
-    "hash": "fee1c86b59e4ab1e539bc2035f868cce"
+    "hash": "e65b245ca4f308109e8c21c11141be22"
   },
   {
     "path": "map/map_3-5_2.json",
-    "hash": "a073e0e9da0f5bf1b3215cb5647e9e0c"
+    "hash": "9f623a4d32fb5291b45f3502ae8a495d"
   },
   {
     "path": "map/map_3-6_1.json",
@@ -501,7 +497,7 @@
   },
   {
     "path": "map_data/enemy_info.json",
-    "hash": "73e9124ab8cc46f6532c6ab48c183c08"
+    "hash": "f30b3c2e34efa27a278ad07b83286b30"
   },
   {
     "path": "map_data/enemy_info.xlsx",
@@ -509,243 +505,243 @@
   },
   {
     "path": "map_data/enemy_labels.json",
-    "hash": "55549be2fa7396847b85e576b23d62e0"
+    "hash": "f3e5859690882bfd5e9ef5c10f84c158"
   },
   {
     "path": "map_data/get_enemy_pos.py",
-    "hash": "dda38f5163ef9849943e3c887e573339"
+    "hash": "f09fbb0339b7d87ed7595e114a28170b"
   },
   {
     "path": "map_data/labels.json",
-    "hash": "d686b132b13106106acfe7238285fd0e"
+    "hash": "d577f01a2aa45dce7ef675313120cc41"
   },
   {
     "path": "map_data/tree.json",
-    "hash": "d23bffe27ff6b5cbf0d73e714e98118f"
+    "hash": "8510a00349bb3771ec3bfbce30a4ea14"
   },
   {
     "path": "map_data/info/38.json",
-    "hash": "7f6248f9d9150f22bf9745006c9a1545"
+    "hash": "575fb8cf2b50b70af543dcaffaa2a500"
   },
   {
     "path": "map_data/info/39.json",
-    "hash": "4b2bc318603c1bfdfe267aa703dfa1fc"
+    "hash": "a1fbd8279b9c0436327d43d309046364"
   },
   {
     "path": "map_data/info/43.json",
-    "hash": "d10889d1658e5c11905186546ae6aa65"
+    "hash": "71f060a3fd22fcd4e58974e9df462ef2"
   },
   {
     "path": "map_data/info/44.json",
-    "hash": "51d0db8f990c89ee492cc28d0a59e6a7"
+    "hash": "0de47301a80f4960ef1b3318fd8f3112"
   },
   {
     "path": "map_data/info/45.json",
-    "hash": "66f315077f26e54f84854c7dd8202ded"
+    "hash": "9314168d7a51c24b98be587c645747c2"
   },
   {
     "path": "map_data/info/46.json",
-    "hash": "559b500cabbf30fc9a23f661bf60750f"
+    "hash": "6ce522220f861846d4c0e302d7f913aa"
   },
   {
     "path": "map_data/info/47.json",
-    "hash": "db37a4c0a7dc2695bbdb1242a56261a2"
+    "hash": "df08b653bf3958af7f776ddf6dc8eec0"
   },
   {
     "path": "map_data/info/48.json",
-    "hash": "f39fcc4c28f3a577b8a4f912eefd5a16"
+    "hash": "6df32d76f82bf0640bf0271451323c1f"
   },
   {
     "path": "map_data/info/49.json",
-    "hash": "2700bd85ababc2ef29fde17d7aaca1c5"
+    "hash": "cc956d9643a4dc2c7fbfd8f273276380"
   },
   {
     "path": "map_data/info/50.json",
-    "hash": "5e7f56d6ae898863d43ce324abecf641"
+    "hash": "5f70a74f7f1da404c8d0f7d05e7f3c58"
   },
   {
     "path": "map_data/info/51.json",
-    "hash": "7b9217e0531e2db25d8201ead69cb55a"
+    "hash": "3eb834d32bffd488e9a0cf3d66b545ec"
   },
   {
     "path": "map_data/info/52.json",
-    "hash": "07efb51dceae25417eb7cc7f43304791"
+    "hash": "9b5f1ac093c51b88238d5436d03a8d79"
   },
   {
     "path": "map_data/info/53.json",
-    "hash": "151e75f9dd3474c6352062dff67f81bb"
+    "hash": "708448f12a61f05c70ce16a5e1bcc0be"
   },
   {
     "path": "map_data/info/54.json",
-    "hash": "f298ead29e33e1e71fe31ae0dd163f35"
+    "hash": "87a2b7bd924241f2c5f385eb5e8ed93a"
   },
   {
     "path": "map_data/info/55.json",
-    "hash": "9458f76cdad707f031411b5588b59ffd"
+    "hash": "23a64770bd63108a78876c2094a5c2ef"
   },
   {
     "path": "map_data/info/56.json",
-    "hash": "ccdb9a62f88f319cdb96d5509f3f0c02"
+    "hash": "5d77360ce6428b55bf1f676b571bafa8"
   },
   {
     "path": "map_data/info/57.json",
-    "hash": "0a5fe36854b6371b2aab9c8faa5a2d0c"
+    "hash": "593004218c4a6430be0723d671875762"
   },
   {
     "path": "map_data/info/58.json",
-    "hash": "f72fd8bb4e17c48c8c136850c78dd723"
+    "hash": "6552c707d9d23c962684f738fac38c43"
   },
   {
     "path": "map_data/info/59.json",
-    "hash": "c9eef48db04576d55f98420538b5b0c9"
+    "hash": "314b49db655354019f5244cb3a9b1fac"
   },
   {
     "path": "map_data/info/60.json",
-    "hash": "6f9103d82d1373829cd6974f958d4de6"
+    "hash": "f6ffcc7ae88efb860005e665777636ba"
   },
   {
     "path": "map_data/info/61.json",
-    "hash": "0ed7649fcb579f5033f4850acd43f16b"
+    "hash": "9c37e442611c461fb4314ae3b78f76f5"
   },
   {
     "path": "map_data/info/62.json",
-    "hash": "d2b52dfa7b9ae72c4f4664d3d8314a3b"
+    "hash": "406e0b413d99c695a20f03494430056d"
   },
   {
     "path": "map_data/info/63.json",
-    "hash": "72daf6e0ecf0c94cb217df92d2eb7d9a"
+    "hash": "f81a5582063bbc461656143c966efce7"
   },
   {
     "path": "map_data/info/64.json",
-    "hash": "5f3f757e9ab742e74fa56557976e324f"
+    "hash": "0dfe513247b70caa9b0f17bb64cbf2a5"
   },
   {
     "path": "map_data/info/66.json",
-    "hash": "b4dddc653e837c757c6046fa0d08bdbf"
+    "hash": "ab7563c4f2005a385dc87048a16d3e74"
   },
   {
     "path": "map_data/info/67.json",
-    "hash": "fb0536c5265ddf7a74c51b3ec93b203e"
+    "hash": "5dab0ded76e17d6824aa710e726e3a72"
   },
   {
     "path": "map_data/info/68.json",
-    "hash": "d713197577e95b766500a575800a24e1"
+    "hash": "1ab341c5452b2481698800f6123b57e0"
   },
   {
     "path": "map_data/info/69.json",
-    "hash": "866c6749cbe417b08b5618db8d7e0d07"
+    "hash": "da5898eb35b2269e9f01ff90db344e5b"
   },
   {
     "path": "map_data/point/38.json",
-    "hash": "1e6316d7f60f75463ca192e0f247794c"
+    "hash": "6d6d2cbc4b7334fe9be136667da97242"
   },
   {
     "path": "map_data/point/39.json",
-    "hash": "6da0ccea1375bd585c5b4d97f134ba10"
+    "hash": "719c938019f1fed3154f6815a07d2f2a"
   },
   {
     "path": "map_data/point/43.json",
-    "hash": "48ccc4e9e20ca36af3689542fd946ed9"
+    "hash": "bbe6430d00af0b59ef455eaca03e11fc"
   },
   {
     "path": "map_data/point/44.json",
-    "hash": "430785a6ab6ff5f8de755a50ac08ff7c"
+    "hash": "2c830c3ad079da18a144bcc705700510"
   },
   {
     "path": "map_data/point/45.json",
-    "hash": "cd403ca51f4f8ee171c8ffdc8939a342"
+    "hash": "6b961188fe009a3a6f7ae6441d07f0dc"
   },
   {
     "path": "map_data/point/46.json",
-    "hash": "a6d5b0e78214fa6ace0658521fd2e9aa"
+    "hash": "c42d8741dae7581dfa31803baf35f5a4"
   },
   {
     "path": "map_data/point/47.json",
-    "hash": "5a6d4dcf6092556b1a04c5397187b0bc"
+    "hash": "5d0eae589b6d5603a44f7a25dc44ec98"
   },
   {
     "path": "map_data/point/48.json",
-    "hash": "af2673e560d980289f651a5ec34f7e71"
+    "hash": "6dc005a3763715f75671a8d6281b1a76"
   },
   {
     "path": "map_data/point/49.json",
-    "hash": "ff946a06da5f487dfa7d1ae1f21cc663"
+    "hash": "7b47c05702d01637f0e2bd7f80171c7a"
   },
   {
     "path": "map_data/point/50.json",
-    "hash": "a36052321e2d754cd08c8740f4b2f2bf"
+    "hash": "7aec4fd49f9f1101dd2e59bd134002e1"
   },
   {
     "path": "map_data/point/51.json",
-    "hash": "99e5e8b84d5f92f992d0f3807eb1261b"
+    "hash": "d9de5dcf8c086b7f66935380ac28ffa1"
   },
   {
     "path": "map_data/point/52.json",
-    "hash": "4370969bb4758b5f9f557b7458349cf7"
+    "hash": "8b6df8a25305d075ec8ab5f30576a2fa"
   },
   {
     "path": "map_data/point/53.json",
-    "hash": "ebf64dc377bc85221fdd6e424ae42cf8"
+    "hash": "18ec4d5cc82a79132d069e3c45aa35ca"
   },
   {
     "path": "map_data/point/54.json",
-    "hash": "140b152b60f3433461351f53ede06c97"
+    "hash": "c2001d8308e9357af31d404eeb2fa9f7"
   },
   {
     "path": "map_data/point/55.json",
-    "hash": "842b2fec217c1b986ee596f70494de21"
+    "hash": "9afcdc8d7c3f5f30347e641ebf7a5d2f"
   },
   {
     "path": "map_data/point/56.json",
-    "hash": "73875a67b262d2dfc985e16da4bda2b9"
+    "hash": "fe9f29da73be3c89468d1b5c007f023a"
   },
   {
     "path": "map_data/point/57.json",
-    "hash": "7aa8519571483911a9bd84e6b8b1ac32"
+    "hash": "b759c1dc22ee0cadd433ad1a0b8293a5"
   },
   {
     "path": "map_data/point/58.json",
-    "hash": "b6ee3ffcb286e398f0295118141d702f"
+    "hash": "7f9a5e429a9108ed2674e10eebd9c257"
   },
   {
     "path": "map_data/point/59.json",
-    "hash": "e627d9815e99ede5d5e26060d8cbf234"
+    "hash": "757a449f1610148e67a634e644d8c2ec"
   },
   {
     "path": "map_data/point/60.json",
-    "hash": "7e83cb17d04ad050696714fd8681ba72"
+    "hash": "34dce449572ebb2214e14b03de36835d"
   },
   {
     "path": "map_data/point/61.json",
-    "hash": "973beb01deb968861c6726239f615edc"
+    "hash": "bc5ee1ebe2cbdffcbde40021b2fea3b0"
   },
   {
     "path": "map_data/point/62.json",
-    "hash": "0418b80c53627e711746cddcaf254789"
+    "hash": "46d76b8f978e556392c4cd26d7d78e59"
   },
   {
     "path": "map_data/point/63.json",
-    "hash": "c3911736ed2e0f4d185d0866251db867"
+    "hash": "fe916c3113d91884ed775403809814c9"
   },
   {
     "path": "map_data/point/64.json",
-    "hash": "5165896898f4c79703620d6d6f3d22ac"
+    "hash": "6279466a7353f66c2e61640e5e8e7aaa"
   },
   {
     "path": "map_data/point/66.json",
-    "hash": "5fa8641610412cc539e88c13fcf62351"
+    "hash": "182a3dc3804cc7488a299692f7ad6e0b"
   },
   {
     "path": "map_data/point/67.json",
-    "hash": "f88d12baefcb39108121dc36e8ff59d8"
+    "hash": "bc9d5fcbcf9e1753546c24eda717226b"
   },
   {
     "path": "map_data/point/68.json",
-    "hash": "2a53dd45bfef05a16f787293365d3a35"
+    "hash": "31ba097344849f68e57b1efae2432333"
   },
   {
     "path": "map_data/point/69.json",
-    "hash": "3cf3264b909284d97241b4b740b0de74"
+    "hash": "7b09a9acde6afc09978f951f9f2ce913"
   },
   {
     "path": "picture/1.ico",
@@ -1373,27 +1369,27 @@
   },
   {
     "path": "utils/config.py",
-    "hash": "2286a56149e7a157e71a365a2b27f01d"
+    "hash": "f169f6cd283aa6f492d06a29a119587c"
   },
   {
     "path": "utils/convert.py",
-    "hash": "3f5ed632280b093dc8a0a4eb1300891e"
+    "hash": "0c7929bcaa25715ad807951513485616"
   },
   {
     "path": "utils/exceptions.py",
-    "hash": "5748c25619c5395bedb6c0425bc03257"
+    "hash": "e82c27db393fb3d81d62d1f279b19bae"
   },
   {
     "path": "utils/get_angle.py",
-    "hash": "e1cf729da8e527bf84f0e4b7e244a349"
+    "hash": "786a97ae26e4eec4d1315a16ce43e1be"
   },
   {
     "path": "utils/install_requirements.py",
-    "hash": "d7b3f07495de2b214adf3d2524a08989"
+    "hash": "4902540e0f2d263f059217e5c5fdfa14"
   },
   {
     "path": "utils/log.py",
-    "hash": "9a1580b453c52dae8e4ee295f241a628"
+    "hash": "2ca75ef5fdfae20d336e7b7f4e222331"
   },
   {
     "path": "utils/map.py",
@@ -1401,27 +1397,27 @@
   },
   {
     "path": "utils/mini_asu.py",
-    "hash": "96a56f42f9ed1cdfda4ce09fe577cdb4"
+    "hash": "86dccffc55366fdc86bf7d0c8c6c7023"
   },
   {
     "path": "utils/record.py",
-    "hash": "9a1cd2b403971bfba13b466d32780b86"
+    "hash": "b3ef6ebbcef10b7e71b7ab3e56b8fa09"
   },
   {
     "path": "utils/requests.py",
-    "hash": "8b3e24396a1f8be5251e13aac7bae960"
+    "hash": "e17ccedb223be3399eb7721ea9291eee"
   },
   {
     "path": "utils/shutdown.py",
-    "hash": "b903ba95c806cf1979a7b42ad7f5b62f"
+    "hash": "71980b92c5f9d84acabe5c1158b60195"
   },
   {
     "path": "utils/switch_window.py",
-    "hash": "fb71c128f06f924a72e14025ae239c5a"
+    "hash": "0a1444d28938ade638256a310787da47"
   },
   {
     "path": "utils/update_file.py",
-    "hash": "cbb3aaf42a05e803e210cdeb60b5c308"
+    "hash": "925de2a3bc596693539b9934f6a0b16e"
   },
   {
     "path": "新图注意事项/筑梦边境初始机关1.png",
