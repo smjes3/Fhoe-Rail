@@ -12,13 +12,18 @@ import os
 import sys
 import requests
 from loguru import logger
+import json
 
 try:
     from .requests import post
 except:
     from requests import post
 
-VER = "2.061"
+version_file_path = os.path.join(os.path.dirname(__file__), '..', 'version.json')
+with open(version_file_path, 'r') as f:
+    version_data = json.load(f)
+VER = version_data.get('version', '1.0')
+
 log = logger
 dir_log = "logs"
 path_log = os.path.join(dir_log, '日志文件.log')
