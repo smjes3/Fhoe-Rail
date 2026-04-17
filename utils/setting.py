@@ -4,6 +4,7 @@ from typing import Literal
 import questionary
 
 from utils.config.config import ConfigurationManager
+from utils.config.planet_config import PlanetConfig
 from utils.log import log
 from utils.map_utils.map_info import MapInfo
 from utils.time_utils import TimeUtils
@@ -155,14 +156,7 @@ class Setting(metaclass=SingletonMeta):
             },
             {
                 "title": "优先星球",
-                "choices": {
-                    "空间站「黑塔」": "1",
-                    "雅利洛-VI": "2",
-                    "仙舟「罗浮」": "3",    
-                    "匹诺康尼": "4",
-                    "翁法罗斯": "5",
-                    "二相乐园": "6",
-                },
+                "choices": {v: k for k, v in PlanetConfig.PLANETS.items()},
                 "config_key": "main_map",
             },
             {
@@ -294,14 +288,7 @@ class Setting(metaclass=SingletonMeta):
     def _h_select_planet(self):
         """星球选择菜单 (第一级)"""
         title = "选择星球："
-        opts = {
-            "1 空间站「黑塔」": "1",
-            "2 雅利洛-VI": "2",
-            "3 仙舟「罗浮」": "3",
-            "4 匹诺康尼": "4",
-            "5 翁法罗斯": "5",
-            "返回": "back"
-        }
+        opts = PlanetConfig.get_planet_options_with_return()
         choice = questionary.select(title, choices=list(opts.keys())).ask()
         return opts.get(choice) if choice else None
 
@@ -326,7 +313,7 @@ class Setting(metaclass=SingletonMeta):
         choices = [
             f"{name} ({len(ids)}个子地图)"
             for name, ids in unique_maps.items()
-        ] + ["返回上级"]
+        ] + ["【返回上级】"]
 
         # 显示选择菜单
         selected = questionary.select(

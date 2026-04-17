@@ -1,5 +1,6 @@
 import questionary
 from utils.config.config import ConfigurationManager
+from utils.config.planet_config import PlanetConfig
 from utils.log import log
 from utils.time_utils import TimeUtils
 from utils.map_utils.map_info import MapInfo
@@ -43,18 +44,13 @@ def choose_map_debug(map_info: MapInfo):
 
 def _h_main_map(map_info: MapInfo):
     title = "请选择起始星球："
-    opts = {
-        "1 空间站「黑塔」": "1",
-        "2 雅利洛-VI": "2",
-        "3 仙舟「罗浮」": "3",
-        "4 匹诺康尼": "4",
-        "5 翁法罗斯": "5",
-        "6 二相乐园": "6",
+    opts = PlanetConfig.get_planet_options()
+    opts.update({
         "优先星球": "first_map",
         "仅此次运行白名单地图": "allowlist",
         "[设置]": "option",
         "[定时]": "scheduled",
-    }
+    })
 
     choice = questionary.select(title, list(opts.keys())).ask()
     if not choice:
@@ -75,15 +71,7 @@ def _h_main_map(map_info: MapInfo):
 
 def _h_priority(map_info: MapInfo):
     title = "优先星球选择"
-    opts = {
-        "1 空间站「黑塔」": "1",
-        "2 雅利洛-VI": "2",
-        "3 仙舟「罗浮」": "3",
-        "4 匹诺康尼": "4",
-        "5 翁法罗斯": "5",
-        "6 二相乐园": "6",
-        "【返回】": "back",
-    }
+    opts = PlanetConfig.get_planet_options_with_return()
     choice = questionary.select(title, list(opts.keys())).ask()
 
     if choice == "【返回】" or not choice:
