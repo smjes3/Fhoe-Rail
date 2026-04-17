@@ -2,6 +2,7 @@ import re
 from typing import Literal
 
 import questionary
+from questionary import Style
 
 from utils.config.config import ConfigurationManager
 from utils.config.planet_config import PlanetConfig
@@ -9,6 +10,15 @@ from utils.log import log
 from utils.map_utils.map_info import MapInfo
 from utils.time_utils import TimeUtils
 from utils.singleton import SingletonMeta
+
+# 常量分割线
+SEPARATOR = "-" * 60
+
+# 自定义样式，只保留高亮功能
+custom_style = Style([
+    ('highlighted', 'fg:#ffffff bg:#673ab7 bold'),  # 高亮选项（背景色）
+    ('selected', 'fg:#ffffff bg:#673ab7 bold'),  # 选中选项（背景色）
+])
 
 
 class Setting(metaclass=SingletonMeta):
@@ -56,19 +66,50 @@ class Setting(metaclass=SingletonMeta):
                     display_value = inverted_choices.get(
                         current_value, "未设置" if current_value is None else "未知值")
 
-                choices.append(f"{title}------({display_value})")
+                # 格式化选项，确保当前值部分对齐
+                # 限制标题长度
+                max_title_length = 35
+                if len(title) > max_title_length:
+                    title = title[:max_title_length-3] + "..."
+                # 计算标题的显示宽度（中文字符算2个宽度）
+                def get_display_width(s):
+                    width = 0
+                    for c in s:
+                        if ord(c) > 127:
+                            width += 2
+                        else:
+                            width += 1
+                    return width
+                
+                # 目标宽度
+                target_width = 50
+                # 计算需要的空格数
+                spaces_needed = target_width - get_display_width(title)
+                # 确保至少有一个空格
+                spaces_needed = max(1, spaces_needed)
+                # 添加空格
+                spaces = " " * spaces_needed
+                choices.append(f"{title}{spaces}[当前: {display_value}]")
 
-            choices.append("【返回】")
+            choices.append(SEPARATOR)
+            choices.append("【返回主菜单】")
 
             answer = questionary.select(
                 "请选择要修改的设置:",
-                choices=choices
+                choices=choices,
+                style=custom_style
             ).ask()
 
-            if answer == "【返回】":
+            if answer == "【返回主菜单】":
                 return
+            
+            # 检查是否是非有效选项（如分隔线）
+            # 有效选项应该包含 "[当前: " 标记
+            if "[当前: " not in answer:
+                continue
 
-            selected_title = answer.split("------")[0]
+            # 提取标题（去掉 [当前: ...] 部分）
+            selected_title = answer.split(" [当前: ")[0].strip()
             selected_question = next(
                 q for q in questions if get_title(q) == selected_title)
 
@@ -87,7 +128,8 @@ class Setting(metaclass=SingletonMeta):
 
         answer = questionary.select(
             question['title'],
-            choices=list(choices_dict.keys())
+            choices=list(choices_dict.keys()),
+            style=custom_style
         ).ask()
 
         if answer:
@@ -99,7 +141,8 @@ class Setting(metaclass=SingletonMeta):
             current_choices = question['choices'](config, map_instance)
             answer = questionary.select(
                 question['dynamic_title'](config),
-                choices=list(current_choices.keys())
+                choices=list(current_choices.keys()),
+                style=custom_style
             ).ask()
 
             if answer in ["【返回】", "back"]:
@@ -115,7 +158,8 @@ class Setting(metaclass=SingletonMeta):
                 target_choices = handler['choices'](config, map_instance)
                 selected = questionary.select(
                     handler['title'],
-                    choices=list(target_choices.keys())+["【返回】"]
+                    choices=list(target_choices.keys())+["【返回】"],
+                    style=custom_style
                 ).ask()
 
                 if selected and selected != "【返回】":
@@ -289,7 +333,7 @@ class Setting(metaclass=SingletonMeta):
         """星球选择菜单 (第一级)"""
         title = "选择星球："
         opts = PlanetConfig.get_planet_options_with_return()
-        choice = questionary.select(title, choices=list(opts.keys())).ask()
+        choice = questionary.select(title, choices=list(opts.keys()), style=custom_style).ask()
         return opts.get(choice) if choice else None
 
     def _h_select_clean_map(self, map_info: MapInfo, main: str):
@@ -318,7 +362,8 @@ class Setting(metaclass=SingletonMeta):
         # 显示选择菜单
         selected = questionary.select(
             "请选择地图：",
-            choices=choices
+            choices=choices,
+            style=custom_style
         ).ask()
 
         # 处理返回/退出
