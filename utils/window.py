@@ -6,6 +6,7 @@ import pyautogui
 import win32api
 import win32con
 import win32gui
+import win32process
 
 from utils.exceptions import CustomException
 from utils.log import log
@@ -84,7 +85,7 @@ class Window(metaclass=SingletonMeta):
         for attempt in range(5):
             try:
                 fg = win32gui.GetForegroundWindow()
-                tid_fg = win32api.GetWindowThreadProcessId(fg)[0] if fg else 0
+                tid_fg = win32process.GetWindowThreadProcessId(fg)[0] if fg else 0
                 tid_self = win32api.GetCurrentThreadId()
                 if tid_fg != tid_self and tid_fg:
                     win32api.AttachThreadInput(tid_self, tid_fg, True)
