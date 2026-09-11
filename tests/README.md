@@ -126,7 +126,9 @@ py -m pytest tests/ -q -rx
 **`tools/` 不是包。** 它是按路径调用的脚本目录（没有 `__init__.py`），
 `test_architecture.py` 里有一条专门守护这一点——一旦它变成包，就会诱导别人 import 那些脚本。
 
-**`tools/shutdown.py` 绝不被 import。** 它在模块级创建 Tk 窗口并调用
-`mainloop()`，导入即阻塞，且 30 秒后会启动关机倒计时（终点是
-`os.system("shutdown /s /t 1")`）。`test_shutdown.py` 因此只做 AST 静态分析
-与源码检索，同时用一个用例守护"没有任何模块 import 它"。
+**`tools/shutdown.py` 不允许被 import。** 它跑的是 Tk 事件循环。
+2026-09 之前它在模块级创建根窗口并调用 `mainloop()`，导致任何
+`import tools.shutdown` 都永久阻塞、30 秒后还会启动关机倒计时；
+现在 GUI 全部收在 `main()` 里、加了 `__main__` 守卫。
+`test_shutdown.py` 除了 AST 静态分析，还会**用子进程真跑一次 import**
+（那才是当初出问题的行为），并守护"没有任何模块 import 它"。

@@ -148,7 +148,7 @@ Fhoe-Rail/
 │  ├─ convert.py              #   地图 JSON 字段批量替换
 │  ├─ update_file.py          #   资源更新
 │  ├─ install_requirements.py #   依赖安装（bat / WebUI 按路径调用）
-│  ├─ shutdown.py             #   ⚠️ 倒计时关机 GUI（导入即阻塞，见 §3.5）
+│  ├─ shutdown.py             #   倒计时关机 GUI（GUI 收在 main() 内，见 §3.5 R16）
 │  └─ convert_to_webp.py / map_res_list.py / map_simplify.py / test.py
 │
 ├─ data/                      # 运行时资源：map/ picture/
@@ -191,19 +191,20 @@ Fhoe-Rail/
 - ✅ 修 `Img` 单例问题：`Img` 收为单例（7 处 `Img()` 现在共用一个实例），
   重试标志改由 `MouseEvent.last_search_allow_retry` 承载，`retry_in_map`
   重试分支恢复生效
+- ✅ 阈值集中到 `core/thresholds.py`（48 个常量，纯搬运不改数值；
+  **来源仍待实测标定**，见 §1.2）
+- ✅ `tools/shutdown.py` 加 `__main__` 守卫（导入不再阻塞）
 
 接下来：
 
-1. **抽出 `core/thresholds.py`**，把 19 处 `max_val > 0.9x` 与 24 处 `threshold=0.xx`
-   集中并补来源注释。低风险、收益立刻体现。→ 半天
-2. **`tools/shutdown.py` 加 `__main__` 守卫**（它现在导入即阻塞，30 秒后还会启动关机倒计时）。
-   → 1 小时
-3. **拆 `drivers/img.py`**：截图部分留 drivers，模板匹配搬 `vision/matcher.py`。
+1. **拆 `drivers/img.py`**：截图部分留 drivers，模板匹配搬 `vision/matcher.py`。
    这一步做完，`drivers` 与 `vision` 的棘轮名单能缩短一大截。→ 1 天
-4. **把 `win32api` 从 `flows/handle.py` 赶出去**，改调 `drivers`。
+2. **把 `win32api` 从 `flows/handle.py` 赶出去**，改调 `drivers`。
    这是后续所有测试的地基。→ 2–3 天
-5. **拆 `Handle`**（1150 行 / 44 方法）成 `flows/combat.py` + `flows/orientation.py`。
+3. **拆 `Handle`**（1150 行 / 44 方法）成 `flows/combat.py` + `flows/orientation.py`。
    → 3–5 天，风险最高，放最后
+4. **给 `core/thresholds.py` 补实测来源**（CLAUDE.md §1.2 的那张表）。
+   没有它，48 个常量仍然只能靠猜——这是目前最大的单项技术债。
 
 每完成一步，`tests/test_architecture.py` 的棘轮名单就缩短一行。**名单长度就是技术债的刻度尺。**
 
@@ -293,10 +294,15 @@ ALT/SHIFT 被释放前要比较初始状态，避免把用户自己按住的键�
 ### 3.5 结构
 
 **R16 — 禁止 import 时做事。**
-已发生的故障：`utils/shutdown.py` 在模块级 `tk.Tk()` + `mainloop()`，
-任何 `import utils.shutdown` 都会永久阻塞，30 秒后还会启动关机倒计时。
-同理 `map_selector.py` 在 import 时构造 `Setting()`（会读地图目录），
-`update_file.py` 在 import 时构造 `ConfigurationManager()`（会在 cwd 建 config.json）。
+曾经的故障：`tools/shutdown.py` 在模块级 `tk.Tk()` + `mainloop()`，
+任何 `import tools.shutdown` 都会永久阻塞，30 秒后还会启动关机倒计时。
+（已于 2026-09 修复：GUI 全部收进 `main()`，加 `__main__` 守卫。）
+同一类问题还在别处：`ui/map_selector.py` 在 import 时构造 `Setting()`（会读地图目录），
+`tools/update_file.py` 在 import 时构造 `ConfigurationManager()`（会在 cwd 建 config.json）。
+这些由 `tests/test_architecture.py` 的 `SIDE_EFFECT_ALLOWLIST` 棘轮登记，只减不增。
+
+**规则形式**：模块级只允许 import、`def`、`class` 和常量赋值。
+需要建窗口、起线程、读文件、连外部服务的，一律推迟到函数里由入口显式调用。
 
 **R17 — 禁止 God Object。**
 `Handle` 44 个方法 / 1150 行，被 4 个模块依赖。新增功能不要往它里面塞。

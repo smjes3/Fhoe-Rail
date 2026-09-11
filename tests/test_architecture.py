@@ -95,7 +95,6 @@ SIDE_EFFECT_ALLOWLIST = {
     f"{UI}/text_window.py",  # import 时启动默认调试窗口线程
     f"{CORE}/log.py",  # 配置 loguru handler，合法的启动期副作用
     f"{UI}/map_selector.py",  # 构造 cfg / Setting()
-    f"{TOOLS}/shutdown.py",  # 独立 GUI 脚本，见 tests/test_shutdown.py
     f"{TOOLS}/update_file.py",  # 构造 cfg
 }
 
@@ -321,13 +320,13 @@ class TestStandaloneScripts:
     def test_path_invoked_scripts_are_main_guarded(self):
         """被 `python tools/xxx.py` 调用的脚本必须有 __main__ 守卫。
 
-        `shutdown.py` 是已知的反例（它在模块级跑 GUI），由
-        tests/test_shutdown.py 的 xfail 跟踪，不在这里重复断言。
+        shutdown.py 曾经是反例（模块级跑 GUI，导入即阻塞），
+        2026-09 修好后并入本规则。它的导入安全另有 tests/test_shutdown.py 专门覆盖。
         """
-        for name in ("convert.py", "install_requirements.py"):
+        for name in ("convert.py", "install_requirements.py", "shutdown.py"):
             source = (REPO_ROOT / TOOLS / name).read_text(encoding="utf-8")
             assert '__name__ == "__main__"' in source, (
-                f"tools/{name} 缺少 __main__ 守卫：它会被 bat / WebUI 按路径调用，"
+                f"tools/{name} 缺少 __main__ 守卫：它会被按路径调用，"
                 "但没有守卫时 import 就会执行脚本主体"
             )
 
