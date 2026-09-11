@@ -296,9 +296,9 @@ class TestMouseMove:
 
 
 class TestGetMultiNum:
-    def test_reads_angle_from_config(self, make_instance):
+    def test_reads_angle_from_config(self, make_instance, set_config):
         event = make_instance(MouseEvent, cfg=ConfigurationManager())
-        event.cfg.config_file["angle"] = "1.25"
+        set_config(event.cfg, angle="1.25")
         assert event.get_multi_num() == pytest.approx(1.25)
 
     def test_defaults_to_one_when_missing(self, make_instance):

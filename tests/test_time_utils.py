@@ -89,17 +89,15 @@ class TestHasCrossed4am:
         end = datetime.datetime(2026, 1, 1, 4, 0)
         assert time_mgr.has_crossed_4am(start, end) is True
 
-    def test_uses_refresh_hour_from_config(self, time_mgr):
-        time_mgr.cfg.config_file["refresh_hour"] = 6
-        time_mgr.cfg.config_file["refresh_minute"] = 0
+    def test_uses_refresh_hour_from_config(self, time_mgr, set_config):
+        set_config(time_mgr.cfg, refresh_hour=6, refresh_minute=0)
         start = datetime.datetime(2026, 1, 1, 5, 0)
         end = datetime.datetime(2026, 1, 1, 7, 0)
         assert time_mgr.has_crossed_4am(start, end) is True
 
-    def test_non_zero_refresh_minute_with_start_minute_above_it(self, time_mgr):
+    def test_non_zero_refresh_minute_with_start_minute_above_it(self, time_mgr, set_config):
         """refresh_minute=30，开始时间 5:40 —— 这一支恰好是对的。"""
-        time_mgr.cfg.config_file["refresh_hour"] = 4
-        time_mgr.cfg.config_file["refresh_minute"] = 30
+        set_config(time_mgr.cfg, refresh_hour=4, refresh_minute=30)
         start = datetime.datetime(2026, 1, 1, 5, 40)
         end = datetime.datetime(2026, 1, 2, 4, 35)
         assert time_mgr.has_crossed_4am(start, end) is True
@@ -109,10 +107,9 @@ class TestHasCrossed4am:
         reason="refresh_minute 非 0 且 start.minute < refresh_minute 时，"
         "第 96 行的 `and` 应为 `or`，导致漏判跨刷新点",
     )
-    def test_non_zero_refresh_minute_with_start_minute_below_it(self, time_mgr):
+    def test_non_zero_refresh_minute_with_start_minute_below_it(self, time_mgr, set_config):
         """refresh_minute=30，开始时间 5:10，跑到次日 4:35 应判定为跨过 4:30。"""
-        time_mgr.cfg.config_file["refresh_hour"] = 4
-        time_mgr.cfg.config_file["refresh_minute"] = 30
+        set_config(time_mgr.cfg, refresh_hour=4, refresh_minute=30)
         start = datetime.datetime(2026, 1, 1, 5, 10)
         end = datetime.datetime(2026, 1, 2, 4, 35)
         assert time_mgr.has_crossed_4am(start, end) is True

@@ -40,6 +40,19 @@ def test_something(make_instance):
 夹具会在每个用例前后清空 `SingletonMeta._instances`、`Img._IMG_CACHE`
 和 `MapInfo._maps_cache`，否则上一个用例的配置对象会泄漏到下一个。
 
+**改配置要用 `set_config` 夹具，别直接写 `cfg.config_file[...]`。**
+那改的是内存缓存，而 `ConfigurationManager` 会在文件 mtime 变化时整体重读，
+把内存改动丢掉。Windows 上 `time.time()` 只有约 15.6ms 粒度，这个比较会**偶发**
+为真 —— 于是套件会在毫不相干的用例上随机变红。`set_config` 写磁盘再让管理器
+重读，与生产路径（`modify_json_file`）一致，结果确定：
+
+```python
+def test_something(self, game_map, set_config):
+    set_config(game_map.cfg, forbid_map=["1"])
+```
+
+（`test_config.py` 里直接操作缓存的三处是例外，它们本身就是专门测缓存行为的。）
+
 ## xfail 是缺陷清单，不是"跳过"
 
 失败的用例用 `@pytest.mark.xfail(strict=True)` 标记，`reason` 里写清缺陷本身。

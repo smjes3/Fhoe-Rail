@@ -113,10 +113,9 @@ class TestRefreshConfig:
 
         assert (monthly.next_check_time.hour, monthly.next_check_time.minute) == (6, 15)
 
-    def test_check_reloads_refresh_values_from_config(self, monthly):
+    def test_check_reloads_refresh_values_from_config(self, monthly, set_config):
         """配置里的刷新时间只有走 monthly_pass_check 才会同步到实例上。"""
-        monthly.cfg.config_file["refresh_hour"] = 9
-        monthly.cfg.config_file["refresh_minute"] = 45
+        set_config(monthly.cfg, refresh_hour=9, refresh_minute=45)
         monthly._execute_check_flow = lambda current: None
         monthly.next_check_time = datetime.now() + timedelta(days=1)
 

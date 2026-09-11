@@ -113,38 +113,35 @@ class TestAllowFlags:
 
 
 class TestSkipChecks:
-    def test_forbidden_map_is_skipped(self, game_map):
-        game_map.cfg.config_file["forbid_map"] = ["1"]
+    def test_forbidden_map_is_skipped(self, game_map, set_config):
+        set_config(game_map.cfg, forbid_map=["1"])
         assert game_map.check_forbidden_maps("1-1 空间站「黑塔」") is True
 
-    def test_allowed_map_is_not_skipped(self, game_map):
-        game_map.cfg.config_file["forbid_map"] = ["2"]
+    def test_allowed_map_is_not_skipped(self, game_map, set_config):
+        set_config(game_map.cfg, forbid_map=["2"])
         assert game_map.check_forbidden_maps("1-1 空间站「黑塔」") is False
 
-    def test_non_string_entries_are_rejected(self, game_map, log_records):
-        game_map.cfg.config_file["forbid_map"] = [1, 2]
+    def test_non_string_entries_are_rejected(self, game_map, set_config, log_records):
+        set_config(game_map.cfg, forbid_map=[1, 2])
         assert game_map.check_forbidden_maps("1-1 空间站") is False
         assert any("应只包含字符串" in r["message"] for r in log_records)
 
-    def test_allowlist_mode_skips_maps_outside_the_list(self, game_map):
-        game_map.cfg.config_file["allowlist_mode"] = True
-        game_map.cfg.config_file["allowlist_map"] = ["2"]
+    def test_allowlist_mode_skips_maps_outside_the_list(self, game_map, set_config):
+        set_config(game_map.cfg, allowlist_mode=True, allowlist_map=["2"])
         assert game_map.check_allowlist_maps("1-1 空间站") is True
 
-    def test_allowlist_mode_keeps_listed_maps(self, game_map):
-        game_map.cfg.config_file["allowlist_mode"] = True
-        game_map.cfg.config_file["allowlist_map"] = ["1"]
+    def test_allowlist_mode_keeps_listed_maps(self, game_map, set_config):
+        set_config(game_map.cfg, allowlist_mode=True, allowlist_map=["1"])
         assert game_map.check_allowlist_maps("1-1 空间站") is False
 
-    def test_allowlist_mode_off_keeps_everything(self, game_map):
-        game_map.cfg.config_file["allowlist_mode"] = False
+    def test_allowlist_mode_off_keeps_everything(self, game_map, set_config):
+        set_config(game_map.cfg, allowlist_mode=False)
         assert game_map.check_allowlist_maps("1-1 空间站") is False
 
-    def test_allowlist_once_consumes_the_flag(self, game_map, isolated_cwd):
+    def test_allowlist_once_consumes_the_flag(self, game_map, set_config, isolated_cwd):
         import json
 
-        game_map.cfg.config_file["allowlist_mode_once"] = True
-        game_map.cfg.config_file["allowlist_map"] = ["1"]
+        set_config(game_map.cfg, allowlist_mode_once=True, allowlist_map=["1"])
 
         game_map.check_allowlist_maps("1-1 空间站")
 

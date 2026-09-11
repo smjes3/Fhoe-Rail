@@ -100,6 +100,29 @@ def repo_root(monkeypatch):
     return REPO_ROOT
 
 
+@pytest.fixture
+def set_config(isolated_cwd):
+    """在测试里修改配置：写进磁盘上的 config.json，并让 ConfigurationManager 重读。
+
+    **不要直接写 `cfg.config_file[...]`。** 那改的是内存缓存，而
+    ConfigurationManager 会在文件 mtime 变化时整体重读，把内存改动丢掉；
+    Windows 上 `time.time()` 只有约 15.6ms 粒度，这个 mtime 比较会**偶发**为真，
+    于是套件会在毫不相干的用例上随机变红（见 CLAUDE.md R14）。
+
+    生产代码改配置一律走 `modify_json_file`（落盘），测试也照做就不会有这个问题。
+    """
+
+    def _set(manager, **values):
+        path = isolated_cwd / "config.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data.update(values)
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        manager._config = None
+        manager._last_updated = None
+
+    return _set
+
+
 class FakeWindow:
     """Window 的替身：只实现被测代码真正用到的那几个方法。"""
 

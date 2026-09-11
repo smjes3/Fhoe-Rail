@@ -165,9 +165,9 @@ class TestMapInfoProperties:
     def test_map_list_map_groups_by_planet(self, info):
         assert sorted(info.map_list_map) == ["1", "2"]
 
-    def test_map_version_tracks_config_changes(self, info):
+    def test_map_version_tracks_config_changes(self, info, set_config):
         assert info.map_version == "default"
-        info.cfg.config_file["map_version"] = "HuangQuan"
+        set_config(info.cfg, map_version="HuangQuan")
         assert info.map_version == "HuangQuan"
 
     def test_map_version_is_cached_when_config_unchanged(self, info):
