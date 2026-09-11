@@ -8,8 +8,8 @@ import win32con
 import win32gui
 import win32ui
 
-from utils.log import log
-from utils.window import Window
+from utils.core.log import log
+from utils.drivers.window import Window
 
 
 class Img:

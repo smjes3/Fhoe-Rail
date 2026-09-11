@@ -7,16 +7,16 @@ import numpy as np
 import pyautogui
 from pynput.keyboard import Controller as KeyboardController
 
-from utils.blackscreen import BlackScreen
+from utils.vision.blackscreen import BlackScreen
 from utils.config.config import ConfigurationManager
-from utils.handle import Handle
-from utils.img import Img
-from utils.log import log
-from utils.mini_asu import ASU
-from utils.monthly_pass import MonthlyPass
-from utils.mouse_event import MouseEvent
-from utils.pause import Pause
-from utils.window import Window
+from utils.flows.handle import Handle
+from utils.drivers.img import Img
+from utils.core.log import log
+from utils.vision.mini_asu import ASU
+from utils.flows.monthly_pass import MonthlyPass
+from utils.drivers.mouse_event import MouseEvent
+from utils.drivers.pause import Pause
+from utils.drivers.window import Window
 
 
 class Calculated:

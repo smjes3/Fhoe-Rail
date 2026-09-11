@@ -1,4 +1,4 @@
-# utils/config/text_window.py
+# utils/ui/text_window.py
 import queue
 import threading
 from typing import Any, Literal
@@ -12,7 +12,7 @@ except ImportError:
     tk = None
     TK_AVAILABLE = False
 
-from utils.log import log
+from utils.core.log import log
 
 
 class TextWindow:

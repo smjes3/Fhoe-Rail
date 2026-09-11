@@ -4,8 +4,8 @@ import sys
 import time
 
 import orjson
-from utils.singleton import SingletonMeta
-from utils.log import log
+from utils.core.singleton import SingletonMeta
+from utils.core.log import log
 
 
 class ConfigurationManager(metaclass=SingletonMeta):
@@ -260,7 +260,7 @@ class ConfigurationManager(metaclass=SingletonMeta):
     @classmethod
     def main_start_rewrite(cls, setting):
         """写入需要询问的配置"""
-        # from utils.setting import Setting
+        # from utils.ui.setting import Setting
         setting.set_config(slot="start_rewrite")
         cls.ensure_config_complete()
 

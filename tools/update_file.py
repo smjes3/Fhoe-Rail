@@ -14,9 +14,9 @@ from tqdm import tqdm as tq
 from zipfile import ZipFile, BadZipFile
 from typing import Dict, Optional, Any, Union, Tuple, List
 
-from utils.log import log
-from utils.requests import *
-from utils.exceptions import CustomException
+from utils.core.log import log
+from utils.core.requests import *
+from utils.core.exceptions import CustomException
 from utils.config.config import ConfigurationManager
 
 cfg = ConfigurationManager()

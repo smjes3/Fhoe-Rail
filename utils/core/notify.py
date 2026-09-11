@@ -28,7 +28,7 @@ import json
 import traceback
 
 from utils.config.config import ConfigurationManager
-from utils.log import log
+from utils.core.log import log
 
 # onepush 渠道：notify_key 映射到的参数名
 KEY_PARAM = {

@@ -1,8 +1,8 @@
 import os
 
 from utils.config.config import ConfigurationManager
-from utils.log import log
-from utils.singleton import SingletonMeta
+from utils.core.log import log
+from utils.core.singleton import SingletonMeta
 
 
 class MapInfo(metaclass=SingletonMeta):

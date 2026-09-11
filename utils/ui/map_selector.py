@@ -1,9 +1,9 @@
 import questionary
 from utils.config.config import ConfigurationManager
-from utils.log import log
-from utils.time_utils import TimeUtils
-from utils.map_utils.map_info import MapInfo
-from utils.setting import Setting
+from utils.core.log import log
+from utils.core.time_utils import TimeUtils
+from utils.core.map_info import MapInfo
+from utils.ui.setting import Setting
 
 cfg = ConfigurationManager()
 setting = Setting()

@@ -7,10 +7,10 @@ import win32api
 import win32con
 
 from utils.config.config import ConfigurationManager
-from utils.img import Img
-from utils.log import log
-from utils.singleton import SingletonMeta
-from utils.window import Window
+from utils.drivers.img import Img
+from utils.core.log import log
+from utils.core.singleton import SingletonMeta
+from utils.drivers.window import Window
 
 
 class MouseEvent(metaclass=SingletonMeta):

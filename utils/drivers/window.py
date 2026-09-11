@@ -8,9 +8,9 @@ import win32con
 import win32gui
 import win32process
 
-from utils.exceptions import CustomException
-from utils.log import log
-from utils.singleton import SingletonMeta
+from utils.core.exceptions import CustomException
+from utils.core.log import log
+from utils.core.singleton import SingletonMeta
 
 
 class Window(metaclass=SingletonMeta):

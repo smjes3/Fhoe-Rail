@@ -2,7 +2,7 @@ import time
 import datetime
 
 from utils.config.config import ConfigurationManager
-from utils.log import log
+from utils.core.log import log
 
 
 

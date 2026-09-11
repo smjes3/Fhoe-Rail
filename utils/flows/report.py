@@ -1,10 +1,10 @@
 # report.py
-from utils.handle import Handle
-from utils.log import log
-from utils.map_utils.map_info import MapInfo
-from utils.map_utils.map_statu import MapStatu
-from utils.mouse_event import MouseEvent
-from utils.time_utils import TimeUtils
+from utils.flows.handle import Handle
+from utils.core.log import log
+from utils.core.map_info import MapInfo
+from utils.core.map_statu import MapStatu
+from utils.drivers.mouse_event import MouseEvent
+from utils.core.time_utils import TimeUtils
 
 
 class Report:

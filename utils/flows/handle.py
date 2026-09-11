@@ -14,13 +14,13 @@ import win32api
 import win32con
 
 from utils.config.config import ConfigurationManager
-from utils.exceptions import CustomException
-from utils.img import Img
-from utils.keyboard_event import KeyboardEvent
-from utils.log import log
-from utils.mouse_event import MouseEvent
-from utils.singleton import SingletonMeta
-from utils.window import Window
+from utils.core.exceptions import CustomException
+from utils.drivers.img import Img
+from utils.drivers.keyboard_event import KeyboardEvent
+from utils.core.log import log
+from utils.drivers.mouse_event import MouseEvent
+from utils.core.singleton import SingletonMeta
+from utils.drivers.window import Window
 
 
 class Handle(metaclass=SingletonMeta):

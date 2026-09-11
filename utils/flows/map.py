@@ -3,15 +3,15 @@ import time
 import cv2 as cv
 import pyautogui
 
-from utils.blackscreen import BlackScreen
+from utils.vision.blackscreen import BlackScreen
 from utils.config.config import ConfigurationManager
-from utils.handle import Handle
-from utils.img import Img
-from utils.map_utils.map_info import MapInfo
-from utils.monthly_pass import MonthlyPass
-from utils.mouse_event import MouseEvent
-from utils.config.map_move import MAP_MOVE_NAV_DATA
-from utils.log import log
+from utils.flows.handle import Handle
+from utils.drivers.img import Img
+from utils.core.map_info import MapInfo
+from utils.flows.monthly_pass import MonthlyPass
+from utils.drivers.mouse_event import MouseEvent
+from utils.core.map_move import MAP_MOVE_NAV_DATA
+from utils.core.log import log
 
 
 class Map:

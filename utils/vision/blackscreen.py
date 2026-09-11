@@ -3,8 +3,8 @@ import time
 
 import cv2
 
-from utils.img import Img
-from utils.log import log
+from utils.drivers.img import Img
+from utils.core.log import log
 
 
 class BlackScreen:

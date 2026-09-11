@@ -4,10 +4,10 @@ from typing import Optional
 
 import cv2
 
-from utils.log import log
+from utils.core.log import log
 from utils.config.config import ConfigurationManager
-from utils.img import Img
-from utils.mouse_event import MouseEvent
+from utils.drivers.img import Img
+from utils.drivers.mouse_event import MouseEvent
 
 
 class MonthlyPass:

@@ -10,7 +10,7 @@ Copyright (c) 2023 by ${git_name_email}, All Rights Reserved.
 """
 import traceback
 
-from utils.log import log
+from utils.core.log import log
 
 
 class CustomException(Exception):

@@ -555,7 +555,7 @@ RUN_MODES = {
         "desc": "录制地图（F9 保存，录制中请操作游戏）",
     },
     "install": {
-        "args": ["utils/install_requirements.py"],
+        "args": ["tools/install_requirements.py"],
         "desc": "安装/检查依赖（pip）",
     },
 }
@@ -1092,7 +1092,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, run_stop())
         elif parsed.path == "/api/notify/test":
             try:
-                from utils.notify import Notify
+                from utils.core.notify import Notify
 
                 ok = Notify().send_test()
                 self._send(

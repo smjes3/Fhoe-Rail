@@ -37,7 +37,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from loguru import logger
-from utils.requests import post
+from utils.core.requests import post
 
 # 日志配置
 log = logger

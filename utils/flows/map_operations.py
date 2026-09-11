@@ -6,22 +6,22 @@ import time
 
 import pyautogui
 
-from utils.calculated import Calculated
+from utils.flows.calculated import Calculated
 from utils.config.config import ConfigurationManager
-from utils.config.text_window import show_text, start_tkinter_thread, TEXT_WINDOWS
-from utils.handle import Handle
-from utils.img import Img
-from utils.log import log
-from utils.log import webhook_and_log
-from utils.map_utils.map import Map
-from utils.map_utils.map_info import MapInfo
-from utils.map_utils.map_statu import MapStatu
-from utils.monthly_pass import MonthlyPass
-from utils.mouse_event import MouseEvent
-from utils.pause import Pause
-from utils.time_utils import TimeUtils
-from utils.window import Window
-from utils.report import Report
+from utils.ui.text_window import show_text, start_tkinter_thread, TEXT_WINDOWS
+from utils.flows.handle import Handle
+from utils.drivers.img import Img
+from utils.core.log import log
+from utils.core.log import webhook_and_log
+from utils.flows.map import Map
+from utils.core.map_info import MapInfo
+from utils.core.map_statu import MapStatu
+from utils.flows.monthly_pass import MonthlyPass
+from utils.drivers.mouse_event import MouseEvent
+from utils.drivers.pause import Pause
+from utils.core.time_utils import TimeUtils
+from utils.drivers.window import Window
+from utils.flows.report import Report
 
 
 class MapOperations:
