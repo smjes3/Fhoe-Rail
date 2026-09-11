@@ -181,7 +181,7 @@ class MapOperations:
                 self.show_dev_info(
                     dev, f'"{key}": {value}', 400, 1045, "key_value")
 
-                self.img.search_img_allow_retry = False
+                self.mouse_event.last_search_allow_retry = False
                 self.map.allow_map_drag(start)  # 是否强制允许拖动地图初始化
                 self.map.allow_scene_drag(start)  # 是否强制允许拖动右侧场景初始化
                 self.map.allow_multi_click(start)  # 多次点击
@@ -314,7 +314,7 @@ class MapOperations:
                     self.map_statu.teleport_click_count += 1
                     log.info(
                         f'传送点击（{self.map_statu.teleport_click_count}）')
-                    if self.img.search_img_allow_retry:
+                    if self.mouse_event.last_search_allow_retry:
                         retry = True
                         retry_cnt += 1
                         if retry_cnt == self.retry_cnt_max:

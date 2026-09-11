@@ -20,6 +20,10 @@ class MouseEvent(metaclass=SingletonMeta):
         self.cfg = ConfigurationManager()
 
         self.img_search_val_dict = {}  # 图片匹配值
+        # 上一次 click_target 超时时，调用方是否允许重试整张地图。
+        # 由 click_target 写入、由 flows/map_operations 读取；放在 MouseEvent（单例）
+        # 上而不是 Img 上，是因为读的一方持有的是 MouseEvent 引用（见 img.py 的说明）。
+        self.last_search_allow_retry = False
         self.multi_num = 1
         try:
             self.scale = ctypes.windll.user32.GetDpiForWindow(self.window.hwnd) / 96.0
@@ -217,7 +221,8 @@ class MouseEvent(metaclass=SingletonMeta):
         log.info(
             f"查找图片超时 {target_path} ，最相似图片匹配值 {img_search_val}，所需匹配值 {threshold}"
         )
-        self.img.search_img_allow_retry = retry_in_map
+        # 只有超时这一条路径会写入：提前返回（flag=False）与图片缺失都不算「可重试的失败」
+        self.last_search_allow_retry = retry_in_map
         return False
 
     def click_target_with_alt(self, target_path, threshold, flag=True, clicks=1):

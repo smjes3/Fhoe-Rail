@@ -9,17 +9,29 @@ import win32gui
 import win32ui
 
 from utils.core.log import log
+from utils.core.singleton import SingletonMeta
 from utils.drivers.window import Window
 
 
-class Img:
+class Img(metaclass=SingletonMeta):
+    """屏幕截图与模板匹配。
+
+    单例：截图缓冲、图片缓存、窗口引用都是进程级资源，每个模块各持一份没有意义
+    （7 处 `Img()` 曾各自跑一遍 load_images）。与 Window / MouseEvent / Handle /
+    MapInfo / ConfigurationManager 保持一致的单例策略。
+
+    注意：不要再往这里塞「跨模块传递的状态」。曾经的 `search_img_allow_retry`
+    就是实例属性，而 Img 不是单例，于是 mouse_event 写的标志 map_operations
+    永远读不到 —— 功能静默失效、不报错。跨模块状态请放在调用方真正持有的那个
+    单例上（例：该标志现在是 MouseEvent.last_search_allow_retry）。
+    """
+
     # 图片加载缓存：{(路径): (文件mtime, ndarray)}，文件更新后自动失效
     _IMG_CACHE = {}
 
     def __init__(self, image_paths: dict = None):
         self.window = Window()
         self.temp_screenshot = (0, 0, 0, 0, 0)  # 初始化临时截图
-        self.search_img_allow_retry = False  # 初始化查找图片允许重试为不允许
 
         if image_paths is None:
             self.image_paths = {

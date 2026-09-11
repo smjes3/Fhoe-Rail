@@ -185,19 +185,24 @@ Fhoe-Rail/
 
 ### 2.3 剩余迁移（按收益 / 风险排序）
 
-已完成：分层目录建立（本次）、`tools/` 收纳。
+已完成：
+- ✅ 分层目录建立
+- ✅ `tools/` 收纳独立脚本
+- ✅ 修 `Img` 单例问题：`Img` 收为单例（7 处 `Img()` 现在共用一个实例），
+  重试标志改由 `MouseEvent.last_search_allow_retry` 承载，`retry_in_map`
+  重试分支恢复生效
 
-1. **修 `Img` 单例问题**（真实 bug：`mouse_event` 写的 `search_img_allow_retry` 传不到
-   `map_operations`，`retry_in_map` 静默失效）。顺手把 7 处 `Img()` 重复构造收敛掉。→ 半天
-2. **抽出 `core/thresholds.py`**，把 19 处 `max_val > 0.9x` 与 24 处 `threshold=0.xx`
+接下来：
+
+1. **抽出 `core/thresholds.py`**，把 19 处 `max_val > 0.9x` 与 24 处 `threshold=0.xx`
    集中并补来源注释。低风险、收益立刻体现。→ 半天
-3. **`tools/shutdown.py` 加 `__main__` 守卫**（它现在导入即阻塞，30 秒后还会启动关机倒计时）。
+2. **`tools/shutdown.py` 加 `__main__` 守卫**（它现在导入即阻塞，30 秒后还会启动关机倒计时）。
    → 1 小时
-4. **拆 `drivers/img.py`**：截图部分留 drivers，模板匹配搬 `vision/matcher.py`。
+3. **拆 `drivers/img.py`**：截图部分留 drivers，模板匹配搬 `vision/matcher.py`。
    这一步做完，`drivers` 与 `vision` 的棘轮名单能缩短一大截。→ 1 天
-5. **把 `win32api` 从 `flows/handle.py` 赶出去**，改调 `drivers`。
+4. **把 `win32api` 从 `flows/handle.py` 赶出去**，改调 `drivers`。
    这是后续所有测试的地基。→ 2–3 天
-6. **拆 `Handle`**（1150 行 / 44 方法）成 `flows/combat.py` + `flows/orientation.py`。
+5. **拆 `Handle`**（1150 行 / 44 方法）成 `flows/combat.py` + `flows/orientation.py`。
    → 3–5 天，风险最高，放最后
 
 每完成一步，`tests/test_architecture.py` 的棘轮名单就缩短一行。**名单长度就是技术债的刻度尺。**
@@ -266,9 +271,16 @@ ALT/SHIFT 被释放前要比较初始状态，避免把用户自己按住的键�
 ### 3.4 状态
 
 **R13 — 单例要一致：要么是单例，要么显式传递，不许"一半单例"。**
-已发生的故障：`Window`/`MouseEvent`/`Handle`/`MapInfo` 是单例而 `Img` 不是，
-于是 `mouse_event` 写的标志传不到 `map_operations`，整个 `retry_in_map` 重试机制静默失效。
-**这是全项目最贵的一个 bug**：它不报错，只是功能不再生效。
+曾经的故障：`Window`/`MouseEvent`/`Handle`/`MapInfo` 是单例而 `Img` 不是，
+于是 `mouse_event` 写的重试标志传不到 `map_operations`，整个 `retry_in_map`
+重试机制静默失效。**这曾是全项目最贵的一个 bug**：它不报错，只是功能不再生效。
+（已于 2026-09 修复：`Img` 收为单例，标志改由 `MouseEvent.last_search_allow_retry` 承载。）
+
+**由此得到的规则：跨模块状态必须放在「读取方真正持有的那个单例」上。**
+不是"放在某个单例上就行"——读的一方必须能在自己手上拿到它。
+`map_operations` 持有 `self.mouse_event`，所以标志归 `MouseEvent`；
+`Img` 即使变成单例也不该承载业务流程的状态。
+钉住这条教训的测试：`test_map_operations.py::TestRetryFlagPlumbing`。
 
 **R14 — 配置是全局可变状态：读取可缓存，但必须能失效。**
 `ConfigurationManager.config_file` 会整体替换内部 dict，任何缓存了旧 dict 引用的对象

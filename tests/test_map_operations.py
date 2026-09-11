@@ -143,8 +143,8 @@ def operations(make_instance, isolated_cwd, monkeypatch):
             multi_click=1,
         ),
         handle=SimpleNamespace(f_key_error=False),
-        img=SimpleNamespace(search_img_allow_retry=False),
-        mouse_event=SimpleNamespace(),
+        img=SimpleNamespace(),
+        mouse_event=SimpleNamespace(last_search_allow_retry=False),
         calculated=SimpleNamespace(),
         monthly_pass=SimpleNamespace(monthly_pass_check=lambda: None),
         retry_cnt_max=2,
@@ -282,40 +282,113 @@ class TestProcessSingleMapStart:
 
 
 class TestRetryFlagPlumbing:
-    """search_img_allow_retry 的跨模块传递（见 map_operations.py:184/317 与 mouse_event.py:220）。"""
+    """重试标志的跨模块传递。
 
-    def test_two_img_instances_do_not_share_state(
-        self, monkeypatch, fake_window_factory
-    ):
+    历史：这个标志曾经是 `Img` 的实例属性，而 `Img` 不是单例 ——
+    `mouse_event` 写在自己的实例上，`map_operations` 读另一个实例，永远读到 False，
+    于是 `retry_in_map` 的重试分支从不触发，**而且不报任何错**。
+    现在标志归 `MouseEvent`（单例）所有，读取方本来就持有它的引用。
+    """
+
+    def test_img_is_a_singleton(self, monkeypatch, fake_window_factory):
         monkeypatch.setattr(
             "utils.drivers.img.Window", lambda *args, **kwargs: fake_window_factory()
         )
-        writer = Img(image_paths={})
-        reader = Img(image_paths={})
+        assert Img() is Img(), "7 处 Img() 应共用同一实例"
 
-        writer.search_img_allow_retry = True
-
-        assert reader.search_img_allow_retry is False, (
-            "Img 不是单例，每个模块各持一个实例"
-        )
-
-    @pytest.mark.xfail(
-        strict=True,
-        reason="mouse_event 把重试标志写在自己的 Img 实例上，而 map_operations 读的是"
-        "另一个实例，导致 retry_in_map 的重试分支永远不触发",
-    )
-    def test_flag_written_by_mouse_event_is_visible_to_map_operations(
-        self, monkeypatch, fake_window_factory
-    ):
+    def test_flag_no_longer_lives_on_img(self, monkeypatch, fake_window_factory):
+        """钉住这次的教训：不要把跨模块状态放到 Img 上。"""
         monkeypatch.setattr(
             "utils.drivers.img.Window", lambda *args, **kwargs: fake_window_factory()
         )
-        mouse_event_side = Img(image_paths={})
-        map_operations_side = Img(image_paths={})
+        assert not hasattr(Img(), "search_img_allow_retry")
 
-        mouse_event_side.search_img_allow_retry = True  # mouse_event.py:220
+    @pytest.fixture
+    def retry_run(self, operations, monkeypatch):
+        """驱动一次会走到重试判定的 start 步骤。"""
+        monkeypatch.setattr(operations_module.time, "sleep", lambda seconds: None)
 
-        assert map_operations_side.search_img_allow_retry is True  # map_operations.py:317
+        def _run(click_times_out: bool, retry_in_map: bool = True):
+            write_map(
+                operations.root,
+                "default",
+                "map_1-1_0.json",
+                {
+                    "name": "1-1 空间站「黑塔」",
+                    "author": "tester",
+                    "start": [{"picture\\some_point.png": 1}],
+                    "map": [],
+                },
+            )
+            # 地图数据里的 forbid_retry 决定要不要重试；map_operations 会把它
+            # 作为 retry_in_map 传给 click_target。
+            game_map = MapStub()
+            game_map.allow_retry_in_map_switch = retry_in_map
+
+            mouse = MouseRecorder(result=not click_times_out)
+
+            def click_target(*args, **kwargs):
+                mouse.calls.append(("click_target", args, kwargs))
+                if click_times_out:
+                    # 复刻 mouse_event.click_target 超时分支的写标志行为
+                    mouse.last_search_allow_retry = kwargs.get("retry_in_map", True)
+                return not click_times_out
+
+            mouse.click_target = click_target
+            operations.handle = RecordingHandle()
+            operations.map = game_map
+            operations.calculated = CalculatedRecorder()
+            operations.mouse_event = mouse
+            operations.img = SimpleNamespace(on_main_interface=lambda **kwargs: False)
+            operations.process_single_map_start(0, "map_1-1_0.json")
+            return operations.map_statu
+
+        return _run
+
+    def test_click_timeout_skips_map_after_max_retries(self, retry_run):
+        """点击一直超时且允许重试时，重试到上限后应跳过本图并标记下一图拖动。"""
+        statu = retry_run(click_times_out=True, retry_in_map=True)
+
+        assert statu.skip_this_map is True
+        assert statu.next_map_drag is True, "重试耗尽后应改为拖动地图再试"
+
+    def test_successful_click_does_not_skip(self, retry_run):
+        statu = retry_run(click_times_out=False)
+
+        assert statu.skip_this_map is False
+        assert statu.next_map_drag is False
+
+    def test_forbidden_retry_does_not_skip_the_map(self, retry_run):
+        """地图数据声明 forbid_retry 时，超时不触发重试，也不跳过本图。"""
+        statu = retry_run(click_times_out=True, retry_in_map=False)
+
+        assert statu.skip_this_map is False
+
+    def test_flag_is_reset_before_each_start_step(self, operations, monkeypatch):
+        """上一张图遗留的标志不能影响下一个 start 步骤。"""
+        monkeypatch.setattr(operations_module.time, "sleep", lambda seconds: None)
+        write_map(
+            operations.root,
+            "default",
+            "map_1-1_0.json",
+            {
+                "name": "1-1 空间站「黑塔」",
+                "author": "tester",
+                "start": [{"await": 0.1}],
+                "map": [],
+            },
+        )
+        mouse = MouseRecorder()
+        mouse.last_search_allow_retry = True  # 模拟上一轮遗留
+        operations.handle = RecordingHandle()
+        operations.map = MapStub()
+        operations.calculated = CalculatedRecorder()
+        operations.mouse_event = mouse
+        operations.img = SimpleNamespace(on_main_interface=lambda **kwargs: False)
+        operations.process_single_map_start(0, "map_1-1_0.json")
+
+        assert mouse.last_search_allow_retry is False
+
 
 
 class TestProcessMap:
@@ -369,6 +442,8 @@ class MouseRecorder:
     def __init__(self, result=True):
         self.calls = []
         self.result = result
+        # click_target 超时时由 mouse_event 写入，由 map_operations 读取
+        self.last_search_allow_retry = False
 
     def click_target(self, *args, **kwargs):
         self.calls.append(("click_target", args, kwargs))
@@ -413,10 +488,7 @@ class TestStartStepDispatch:
             operations.map = game_map
             operations.calculated = calculated
             operations.mouse_event = mouse
-            operations.img = SimpleNamespace(
-                search_img_allow_retry=False,
-                on_main_interface=lambda **k: False,
-            )
+            operations.img = SimpleNamespace(on_main_interface=lambda **k: False)
             operations.process_single_map_start(0, "map_1-1_0.json")
             return SimpleNamespace(
                 handle=handle,
