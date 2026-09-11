@@ -5,6 +5,9 @@ import cv2
 
 from utils.drivers.img import Img
 from utils.core.log import log
+from utils.core.thresholds import (
+    FINISH_FIGHTING,
+)
 
 
 class BlackScreen:
@@ -46,9 +49,9 @@ class BlackScreen:
             for image_name in finish_fighting_images:
                 target = Img.get_img(os.path.join(self.image_folder, image_name))
                 result = self.img.scan_screenshot(target)
-                if result and result["max_val"] > 0.9:
+                if result and result["max_val"] > FINISH_FIGHTING:
                     log.info(f"匹配到{image_name}，匹配度{result['max_val']:.3f}")
-                    return False  # 如果匹配度大于0.9，表示不是黑屏，返回False
+                    return False  # 如果匹配度超过 FINISH_FIGHTING，表示不是黑屏，返回False
             attempts += 1
             time.sleep(2)  # 等待2秒再尝试匹配
         return True  # 如果未匹配到指定的图像，返回True

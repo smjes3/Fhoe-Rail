@@ -1,6 +1,7 @@
 # report.py
 from utils.flows.handle import Handle
 from utils.core.log import log
+from utils.core.thresholds import LOW_MATCH_REPORT_FLOOR
 from utils.core.map_info import MapInfo
 from utils.core.map_statu import MapStatu
 from utils.drivers.mouse_event import MouseEvent
@@ -64,7 +65,7 @@ class Report:
             log.info(f"黄泉模式，异常进入战斗：{self.map_statu.fight_in_map_list}")
 
         # 异常图片识别
-        log.debug(f"匹配值小于0.99的图片：{self.mouse_event.img_search_val_dict}")
+        log.debug(f"匹配值小于{LOW_MATCH_REPORT_FLOOR}的图片：{self.mouse_event.img_search_val_dict}")
 
         # 异常 F 键地图
         if hasattr(self.map_statu, 'map_f_key_error'):

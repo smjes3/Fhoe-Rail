@@ -5,6 +5,10 @@ from typing import Optional
 import cv2
 
 from utils.core.log import log
+from utils.core.thresholds import (
+    MONTHLY_PASS,
+    MONTHLY_PASS_NO_PASS,
+)
 from utils.config.config import ConfigurationManager
 from utils.drivers.img import Img
 from utils.drivers.mouse_event import MouseEvent
@@ -135,7 +139,7 @@ class MonthlyPass:
         log.info("判断是否存在月卡")
         target = Img.get_img("./picture/finish_fighting.png")
         result = self.img.scan_screenshot(target)
-        if result["max_val"] > 0.92:
+        if result["max_val"] > MONTHLY_PASS_NO_PASS:
             points = self.img.img_center_point(result, target.shape)
             log.info(
                 f"识别到主界面，无月卡，图片匹配度: {result['max_val']:.2f} ({points[0]}, {points[1]})"
@@ -145,7 +149,7 @@ class MonthlyPass:
         else:
             return True
 
-    def try_click_pass(self, threshold=0.91, delay=0):
+    def try_click_pass(self, threshold=MONTHLY_PASS, delay=0):
         """
         说明：
             尝试点击月卡。
@@ -190,7 +194,7 @@ class MonthlyPass:
         pic_data_check = Img.get_img("./picture/monthly_pass_pic_3.png")
         for _ in range(5):
             result = self.img.scan_screenshot(pic_data_check)
-            if result["max_val"] > 0.91:
+            if result["max_val"] > MONTHLY_PASS:
                 log.info(f"找到月卡奖励图标，图片匹配度：{result['max_val']:.2f}")
                 time.sleep(2)
                 self.mouse_event.relative_click((50, 75))

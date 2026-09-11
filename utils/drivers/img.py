@@ -10,6 +10,7 @@ import win32ui
 
 from utils.core.log import log
 from utils.core.singleton import SingletonMeta
+from utils.core.thresholds import DEFAULT_MATCH
 from utils.drivers.window import Window
 
 
@@ -150,14 +151,14 @@ class Img(metaclass=SingletonMeta):
             "max_loc": (max_loc[0] + left, max_loc[1] + top),
         }
 
-    def have_screenshot(self, prepared, offset=(0, 0, 0, 0), threshold=0.90):
+    def have_screenshot(self, prepared, offset=(0, 0, 0, 0), threshold=DEFAULT_MATCH):
         """
         验证屏幕截图中是否存在预设的图片之一。
 
         参数:
             prepared (list): 需要匹配的图片列表。
             offset (tuple): 在搜索时屏幕截图的偏移量，默认为 (0, 0, 0, 0)。
-            threshold (float): 确定匹配成功的最小阈值，默认为 0.90。
+            threshold (float): 确定匹配成功的最小阈值，默认为 DEFAULT_MATCH。
 
         返回:
             bool: 如果找到至少一张符合阈值的图片，则返回 True，否则返回 False。
@@ -411,7 +412,7 @@ class Img(metaclass=SingletonMeta):
         self,
         check_list=None,
         timeout=60.0,
-        threshold=0.9,
+        threshold=DEFAULT_MATCH,
         offset=(0, 0, 0, 0),
         allow_log=True,
     ):
@@ -444,7 +445,7 @@ class Img(metaclass=SingletonMeta):
         check_list=None,
         timeout=60.0,
         interface_desc="",
-        threshold=0.9,
+        threshold=DEFAULT_MATCH,
         offset=(0, 0, 0, 0),
         allow_log=True,
     ):

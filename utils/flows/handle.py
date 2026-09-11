@@ -18,6 +18,29 @@ from utils.core.exceptions import CustomException
 from utils.drivers.img import Img
 from utils.drivers.keyboard_event import KeyboardEvent
 from utils.core.log import log
+from utils.core.thresholds import (
+    ACTION_BAR,
+    AUTO_OFF_ICON,
+    BATTLE_ESC_CHECK,
+    CANCEL_BUTTON,
+    CONTINUE_FIGHTING,
+    DEFEAT,
+    DOUBT_ICON,
+    F_ICON,
+    MAIN_INTERFACE,
+    MAIN_INTERFACE_STRICT,
+    QIQIAO_ICON,
+    QIQIAO_LAB,
+    ROUND_DISABLE,
+    ROUND_ICON,
+    SETTING_CONFIRM,
+    SETTING_ICON,
+    SETTING_OPTION,
+    SNACK_CRAFT_BUTTON,
+    SPRINT_ICON,
+    TECHNIQUE_CONSUMABLE,
+    TECHNIQUE_DIALOG,
+)
 from utils.drivers.mouse_event import MouseEvent
 from utils.core.singleton import SingletonMeta
 from utils.drivers.window import Window
@@ -135,7 +158,7 @@ class Handle(metaclass=SingletonMeta):
                     if count == 1
                     else self.img.scan_temp_screenshot(img)
                 )
-                if result["max_val"] > 0.95:
+                if result["max_val"] > F_ICON:
                     found_images[name] = result["max_val"]
                     log.info(f"扫描'F'：{name}，匹配度：{result['max_val']:.3f}")
 
@@ -281,7 +304,7 @@ class Handle(metaclass=SingletonMeta):
             time.sleep(0.5)
             image_a = Img.get_img("./picture/eat.png")
             result_a = self.img.scan_screenshot(image_a)
-            if result_a["max_val"] > 0.9:
+            if result_a["max_val"] > TECHNIQUE_DIALOG:
                 allow_fight_e_buy_prop = self.cfg.config_file.get(
                     "allow_fight_e_buy_prop", False
                 )
@@ -292,7 +315,7 @@ class Handle(metaclass=SingletonMeta):
                         check_list=[round_disable],
                         timeout=0.5,
                         interface_desc="无法购买",
-                        threshold=0.95,
+                        threshold=ROUND_DISABLE,
                     ):
                         pass
                     else:
@@ -305,14 +328,14 @@ class Handle(metaclass=SingletonMeta):
                                 check_list=[food_icon],
                                 timeout=2,
                                 interface_desc="奇巧零食图片",
-                                threshold=0.95,
+                                threshold=QIQIAO_ICON,
                                 offset=(900, 300, -400, -300),
                             ):
                                 find = True
                                 for _ in range(2):
                                     self.mouse_event.click_target(
                                         "./picture/qiqiao.png",
-                                        0.95,
+                                        QIQIAO_ICON,
                                         True,
                                         2,
                                         (900, 300, -400, -300),
@@ -322,11 +345,11 @@ class Handle(metaclass=SingletonMeta):
                                         check_list=[food_lab],
                                         timeout=2,
                                         interface_desc="奇巧零食",
-                                        threshold=0.97,
+                                        threshold=QIQIAO_LAB,
                                     ):
                                         time.sleep(0.1)
                                         self.mouse_event.click_target(
-                                            "./picture/round.png", 0.9, timeout=8
+                                            "./picture/round.png", SNACK_CRAFT_BUTTON, timeout=8
                                         )
                                         self.snack_used += 1
                                         time.sleep(0.5)
@@ -338,7 +361,7 @@ class Handle(metaclass=SingletonMeta):
                                 drag += 1
                         time.sleep(1)
                     self.mouse_event.click_target(
-                        "./picture/cancel.png", 0.95, timeout=2
+                        "./picture/cancel.png", CANCEL_BUTTON, timeout=2
                     )
                     time.sleep(0.1)
                     if allow_buy:
@@ -349,7 +372,7 @@ class Handle(metaclass=SingletonMeta):
                         time.sleep(0.25)
                 else:
                     self.mouse_event.click_target(
-                        "./picture/cancel.png", 0.95, timeout=2
+                        "./picture/cancel.png", CANCEL_BUTTON, timeout=2
                     )
                     time.sleep(0.1)
 
@@ -370,7 +393,7 @@ class Handle(metaclass=SingletonMeta):
             if self.img.on_interface(
                 check_list=[self.img.battle_esc_check],
                 timeout=0.0,
-                threshold=0.97,
+                threshold=BATTLE_ESC_CHECK,
                 offset=(0, 0, -1800, -970),
                 allow_log=True,
             ):
@@ -409,13 +432,13 @@ class Handle(metaclass=SingletonMeta):
             time.sleep(2)
 
             # 通过识图，选择设置
-            if not self.mouse_event.click_target("picture\\setting_icon.png", 0.98):
+            if not self.mouse_event.click_target("picture\\setting_icon.png", SETTING_ICON):
                 log.warning("未找到设置图标")
                 return False
             time.sleep(1)
 
             # 通过识图，选择其他设置
-            if not self.mouse_event.click_target("picture\\setting_other.png", 0.98):
+            if not self.mouse_event.click_target("picture\\setting_other.png", SETTING_OPTION):
                 log.warning("未找到其他设置选项")
                 return False
             time.sleep(0.5)
@@ -427,14 +450,14 @@ class Handle(metaclass=SingletonMeta):
 
             # 点击自动使用消耗品开关
             if not self.mouse_event.click_target(
-                "picture\\auto_use_technique_consumable.png", 0.98
+                "picture\\auto_use_technique_consumable.png", TECHNIQUE_CONSUMABLE
             ):
                 log.warning("未找到自动使用消耗品选项")
                 return False
             time.sleep(1)
 
             # 通过识图，选择"是"确认
-            if not self.mouse_event.click_target("picture\\setting_yes.png", 0.99):
+            if not self.mouse_event.click_target("picture\\setting_yes.png", SETTING_CONFIRM):
                 log.warning("未找到确认按钮")
                 return False
             time.sleep(0.5)
@@ -805,7 +828,7 @@ class Handle(metaclass=SingletonMeta):
         判断是否在疾跑状态
         """
         result = self.img.scan_screenshot(self.img.switch_run, (1720, 930, 0, 0))
-        return result["max_val"] > 0.996
+        return result["max_val"] > SPRINT_ICON
 
     async def async_check_sprint_status(self, need_run=True, delay=0.12):
         """异步检测疾跑状态
@@ -913,7 +936,7 @@ class Handle(metaclass=SingletonMeta):
                     )
                     # log.info(f"疾跑匹配度: {result_run['max_val']}")  # Testlog 用于测试图片匹配度
                     # 如果匹配度超过 0.996，强制断开疾跑
-                    if result_run["max_val"] > 0.996:
+                    if result_run["max_val"] > SPRINT_ICON:
                         log.info(f"疾跑匹配度: {result_run['max_val']}")
                         log.info("强制断开疾跑")
                         KeyboardController().press(KeyboardKey.shift)
@@ -935,8 +958,8 @@ class Handle(metaclass=SingletonMeta):
         img_list.append(Img.get_img("./picture/round.png"))
         for img in img_list:
             result = self.img.scan_screenshot(img)
-            log.info(f"未战斗识别，匹配度{result['max_val']:.3f}，需要0.95")
-            if result["max_val"] > 0.95:
+            log.info(f"未战斗识别，匹配度{result['max_val']:.3f}，需要{ROUND_ICON}")
+            if result["max_val"] > ROUND_ICON:
                 log.info("不在战斗中")
                 return True
         return False
@@ -954,9 +977,9 @@ class Handle(metaclass=SingletonMeta):
             )
             doubt_result = self.img.scan_temp_screenshot(self.img.doubt_ui)
             # warn_result = self.img.scan_temp_screenshot(self.img.warn_ui)
-            if main_result["max_val"] < 0.9:
+            if main_result["max_val"] < MAIN_INTERFACE:
                 return True
-            elif doubt_result["max_val"] > 0.92:
+            elif doubt_result["max_val"] > DOUBT_ICON:
                 action_executed = self.click_action(is_warning=False)
             # elif warn_result["max_val"] > 0.9:
             #     action_executed = self.click_action(is_warning=True)
@@ -982,7 +1005,7 @@ class Handle(metaclass=SingletonMeta):
         start_time = time.time()
         while time.time() - start_time < timeout:
             main_result = self.img.scan_screenshot(self.img.main_ui)
-            if main_result["max_val"] < 0.9:
+            if main_result["max_val"] < MAIN_INTERFACE:
                 return True
             time.sleep(0.5)
 
@@ -1019,7 +1042,7 @@ class Handle(metaclass=SingletonMeta):
         while True:
             result = self.img.scan_screenshot(self.img.main_ui)
             elapsed_time = time.time() - start_time
-            if result["max_val"] > 0.92:
+            if result["max_val"] > MAIN_INTERFACE_STRICT:
                 points = self.img.img_center_point(result, self.img.main_ui.shape)
                 log.info(f"识别点位{points}")
                 self.total_fight_time += elapsed_time
@@ -1045,7 +1068,7 @@ class Handle(metaclass=SingletonMeta):
 
             if not auto_switch and elapsed_time > 5:
                 not_auto_result = self.img.scan_screenshot(not_auto)
-                if not_auto_result["max_val"] > 0.95:
+                if not_auto_result["max_val"] > AUTO_OFF_ICON:
                     pyautogui.press("v")
                     log.info("开启自动战斗")
                     time.sleep(1)
@@ -1063,7 +1086,7 @@ class Handle(metaclass=SingletonMeta):
                         first_auto_check = self.img.on_interface(
                             check_list=[screenshot_auto_check],
                             timeout=1,
-                            threshold=0.97,
+                            threshold=ACTION_BAR,
                             offset=(40, 20, -1725, -800),
                             allow_log=False,
                         )
@@ -1073,7 +1096,7 @@ class Handle(metaclass=SingletonMeta):
                         if self.img.on_interface(
                             check_list=[screenshot_auto_check],
                             timeout=1,
-                            threshold=0.97,
+                            threshold=ACTION_BAR,
                             offset=(40, 20, -1725, -800),
                             allow_log=False,
                         ):
@@ -1084,7 +1107,7 @@ class Handle(metaclass=SingletonMeta):
 
             if auto_switch_clicked and auto_switch and elapsed_time > 10:
                 not_auto_result_c = self.img.scan_screenshot(not_auto_c)
-                while not_auto_result_c["max_val"] > 0.95:
+                while not_auto_result_c["max_val"] > AUTO_OFF_ICON:
                     log.info(
                         f"开启自动战斗，识别'C'，匹配值：{not_auto_result_c['max_val']}"
                     )
@@ -1095,9 +1118,9 @@ class Handle(metaclass=SingletonMeta):
             if elapsed_time > 90:
                 # self.mouse_event.click_target("./picture/auto.png", 0.98, False)
                 self.mouse_event.click_target(
-                    "./picture/continue_fighting.png", 0.98, False
+                    "./picture/continue_fighting.png", CONTINUE_FIGHTING, False
                 )
-                self.mouse_event.click_target("./picture/defeat.png", 0.98, False)
+                self.mouse_event.click_target("./picture/defeat.png", DEFEAT, False)
                 # self.mouse_event.click_target("./picture/map_4-2_point_3.png", 0.98, False)
                 # self.mouse_event.click_target("./picture/orientation_close.png", 0.98, False)
                 if elapsed_time > 600:

@@ -12,6 +12,12 @@ from utils.config.config import ConfigurationManager
 from utils.flows.handle import Handle
 from utils.drivers.img import Img
 from utils.core.log import log
+from utils.core.thresholds import (
+    DREAM_BUILD,
+    MAIN_INTERFACE,
+    MAP_LOADING,
+    ROUND_DISABLE,
+)
 from utils.vision.mini_asu import ASU
 from utils.flows.monthly_pass import MonthlyPass
 from utils.drivers.mouse_event import MouseEvent
@@ -35,7 +41,7 @@ class Calculated:
 
         self.hwnd = self.window.hwnd
 
-    def run_mapload_check(self, error_count=0, max_error_count=10, threshold=0.9):
+    def run_mapload_check(self, error_count=0, max_error_count=10, threshold=MAIN_INTERFACE):
         """
         说明：
             计算地图加载时间
@@ -45,7 +51,7 @@ class Calculated:
         time.sleep(1)  # 短暂延迟后开始判定是否为地图加载or黑屏跳转
         while error_count < max_error_count:
             result = self.img.scan_screenshot(target)
-            if result and result["max_val"] > 0.95:
+            if result and result["max_val"] > MAP_LOADING:
                 log.info(f"检测到地图加载map_load，匹配度{result['max_val']}")
                 if self.img.on_main_interface(
                     check_list=[
@@ -122,7 +128,7 @@ class Calculated:
         time.sleep(3)  # 短暂延迟后开始判定
         while error_count < max_error_count:
             result = self.img.scan_screenshot(target)
-            if result["max_val"] > 0.9:
+            if result["max_val"] > DREAM_BUILD:
                 break
             else:
                 error_count += 1
@@ -153,7 +159,7 @@ class Calculated:
             check_list=[round_disable],
             timeout=5,
             interface_desc="无法购买",
-            threshold=0.95,
+            threshold=ROUND_DISABLE,
         ):
             return False
         else:

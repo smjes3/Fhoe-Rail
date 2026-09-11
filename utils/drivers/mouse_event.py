@@ -9,6 +9,9 @@ import win32con
 from utils.config.config import ConfigurationManager
 from utils.drivers.img import Img
 from utils.core.log import log
+from utils.core.thresholds import (
+    LOW_MATCH_REPORT_FLOOR,
+)
 from utils.core.singleton import SingletonMeta
 from utils.drivers.window import Window
 
@@ -207,7 +210,7 @@ class MouseEvent(metaclass=SingletonMeta):
                     return True
 
             # 持续记录最低匹配值（低于0.99时），供报告输出“最相似图片”参考
-            if img_search_val < 0.99:
+            if img_search_val < LOW_MATCH_REPORT_FLOOR:
                 if target_path in self.img_search_val_dict:
                     if img_search_val < self.img_search_val_dict[target_path]:
                         self.img_search_val_dict[target_path] = img_search_val

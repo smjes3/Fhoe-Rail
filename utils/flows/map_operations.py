@@ -12,6 +12,16 @@ from utils.ui.text_window import show_text, start_tkinter_thread, TEXT_WINDOWS
 from utils.flows.handle import Handle
 from utils.drivers.img import Img
 from utils.core.log import log
+from utils.core.thresholds import (
+    BUY_ICON,
+    DREAM_MACHINE,
+    DREAM_POINT,
+    DREAM_POINT_CLICK,
+    DREAM_SCENE,
+    POINT_SEARCH,
+    TELEPORT_POINT,
+    TRANSFER_ICON,
+)
 from utils.core.log import webhook_and_log
 from utils.flows.map import Map
 from utils.core.map_info import MapInfo
@@ -245,14 +255,14 @@ class MapOperations:
                 elif key == "picture\\max.png":
                     if self.calculated.allow_buy_item():
                         self.map_statu.skip_this_map = False
-                        self.mouse_event.click_target(key, 0.93)
+                        self.mouse_event.click_target(key, BUY_ICON)
                         continue
                     else:
                         self.map_statu.skip_this_map = True
                         break
                 elif key in ["picture\\transfer.png"]:
                     time.sleep(0.2)
-                    if not self.mouse_event.click_target(key, 0.93):
+                    if not self.mouse_event.click_target(key, TRANSFER_ICON):
                         self.map_statu.skip_this_map = True
                         break
                     self.calculated.run_mapload_check()
@@ -277,22 +287,22 @@ class MapOperations:
                     elif key in ["picture\\fanhui_1.png", "picture\\fanhui_2.png"]:
                         self.map.handle_back(key)
                     elif key.startswith("picture\\check_4-1_point"):
-                        self.map.find_transfer_point(key, threshold=0.992, exact=self.map.drag_exact, offset=self.map.drag_offset)
-                        if self.mouse_event.click_target(key, 0.992, retry_in_map=False):
+                        self.map.find_transfer_point(key, threshold=DREAM_MACHINE, exact=self.map.drag_exact, offset=self.map.drag_offset)
+                        if self.mouse_event.click_target(key, DREAM_MACHINE, retry_in_map=False):
                             log.info("筑梦机关检查通过")
                         else:
                             log.info("筑梦机关检查不通过，请将机关调整到正确的位置上")
                             self.map_statu.error_check_point = True
                         time.sleep(1)
                     elif key == "picture\\map_4-1_point_2.png":  # 筑梦边境尝试性修复
-                        self.map.find_transfer_point(key, threshold=0.975, exact=self.map.drag_exact, offset=self.map.drag_offset)
-                        self.mouse_event.click_target(key, 0.95)
+                        self.map.find_transfer_point(key, threshold=DREAM_POINT, exact=self.map.drag_exact, offset=self.map.drag_offset)
+                        self.mouse_event.click_target(key, DREAM_POINT_CLICK)
                         self.map_statu.temp_point = key
                     elif key == "picture\\orientation_1.png":
                         self.map.handle_orientation(key, map_data)
                     elif key.startswith("picture\\map_4-3_point"):
-                        self.map.find_transfer_point(key, threshold=0.975, exact=self.map.drag_exact, offset=self.map.drag_offset)
-                        self.mouse_event.click_target(key, 0.93)
+                        self.map.find_transfer_point(key, threshold=DREAM_POINT, exact=self.map.drag_exact, offset=self.map.drag_offset)
+                        self.mouse_event.click_target(key, TELEPORT_POINT)
                         self.map_statu.temp_point = key
                         time.sleep(1.7)
                     elif key in self.map.planet_png_lst:
@@ -300,16 +310,16 @@ class MapOperations:
                     else:
                         if self.map.allow_drap_map_switch or self.map_drag:
                             self.map.find_transfer_point(
-                                key, threshold=0.975, exact=self.map.drag_exact, offset=self.map.drag_offset)
+                                key, threshold=POINT_SEARCH, exact=self.map.drag_exact, offset=self.map.drag_offset)
                         if self.map.allow_scene_drag_switch:
-                            self.map.find_scene(key, threshold=0.990)
+                            self.map.find_scene(key, threshold=DREAM_SCENE)
                         if self.img.on_main_interface(timeout=0.5, allow_log=False):
                             log.info("执行alt")
                             self.mouse_event.click_target_with_alt(
-                                key, 0.93, clicks=self.map.multi_click)
+                                key, TELEPORT_POINT, clicks=self.map.multi_click)
                         else:
                             self.mouse_event.click_target(
-                                key, 0.93, clicks=self.map.multi_click, retry_in_map=self.map.allow_retry_in_map_switch)
+                                key, TELEPORT_POINT, clicks=self.map.multi_click, retry_in_map=self.map.allow_retry_in_map_switch)
                         self.map_statu.temp_point = key
                     self.map_statu.teleport_click_count += 1
                     log.info(
@@ -367,7 +377,7 @@ class MapOperations:
                         time.sleep(1)
                         if press_key == 'F9':
                             self.mouse_event.click_target(
-                                "picture\\transfer.png", 0.93)
+                                "picture\\transfer.png", TRANSFER_ICON)
                             self.calculated.run_mapload_check()
                         if press_key == 'F10':
                             pass

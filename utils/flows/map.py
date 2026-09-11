@@ -12,6 +12,21 @@ from utils.flows.monthly_pass import MonthlyPass
 from utils.drivers.mouse_event import MouseEvent
 from utils.core.map_move import MAP_MOVE_NAV_DATA
 from utils.core.log import log
+from utils.core.thresholds import (
+    BACK_BUTTON,
+    FLOOR_BUTTON,
+    MAP_BACK,
+    MAP_OPEN,
+    ORIENTATION_ICON,
+    PLANET,
+    PLANET_CLICK,
+    POINT_SEARCH,
+    SCENE_MIN,
+    SCENE_SEARCH,
+    STAR_MAP,
+    TRANSFER_POINT_MIN,
+    TRANSFER_POINT_SEARCH,
+)
 
 
 class Map:
@@ -65,8 +80,8 @@ class Map:
     def find_transfer_point(
         self,
         key,
-        threshold=0.99,
-        min_threshold=0.93,
+        threshold=TRANSFER_POINT_SEARCH,
+        min_threshold=TRANSFER_POINT_MIN,
         timeout=60,
         exact=None,
         offset=None,
@@ -160,7 +175,7 @@ class Map:
             log.info("地图下移")
             self.mouse_event.mouse_drag(*self._directions()["down"])
 
-    def find_scene(self, key, threshold=0.99, min_threshold=0.93, timeout=60):
+    def find_scene(self, key, threshold=SCENE_SEARCH, min_threshold=SCENE_MIN, timeout=60):
         """
         说明:
             寻找场景
@@ -318,7 +333,7 @@ class Map:
             orientation_delay = 2
             while True:
                 self.mouse_event.click_target(
-                    key, 0.97, retry_in_map=self.allow_retry_in_map_switch
+                    key, ORIENTATION_ICON, retry_in_map=self.allow_retry_in_map_switch
                 )
                 orientation_delay = min(orientation_delay, 4)
                 time.sleep(orientation_delay)
@@ -335,9 +350,9 @@ class Map:
             return
         else:
             self.find_transfer_point(
-                key, threshold=0.975, offset=self.drag_offset, exact=self.drag_exact
+                key, threshold=PLANET, offset=self.drag_offset, exact=self.drag_exact
             )
-            if self.mouse_event.click_target(key, 0.93, delay=0.1):
+            if self.mouse_event.click_target(key, PLANET_CLICK, delay=0.1):
                 time.sleep(5)
                 img = Img.get_img("./picture/kaituoli_1.png")
                 delay_time = 0.5
@@ -345,7 +360,7 @@ class Map:
                     check_list=[img],
                     timeout=1,
                     interface_desc="星轨航图",
-                    threshold=0.97,
+                    threshold=STAR_MAP,
                     offset=(1580, 0, 0, -910),
                     allow_log=False,
                 ):
@@ -357,7 +372,7 @@ class Map:
                     log.info(
                         f"检测到未成功点击星球，尝试重试点击星球，鼠标点击间隔时间 {delay_time}"
                     )
-                    self.mouse_event.click_target(key, 0.93, delay=delay_time)
+                    self.mouse_event.click_target(key, PLANET_CLICK, delay=delay_time)
                     time.sleep(5)
                 else:
                     self.planet = key
@@ -366,7 +381,7 @@ class Map:
     def handle_floor(self, key):
         """点击楼层"""
         if self.img.img_bitwise_check(target_path=key, offset=(30, 740, -1820, -70)):
-            self.mouse_event.click_target(key, 0.93, offset=(30, 740, -1820, -70))
+            self.mouse_event.click_target(key, FLOOR_BUTTON, offset=(30, 740, -1820, -70))
         else:
             log.info("已在对应楼层，跳过选择楼层")
 
@@ -377,12 +392,12 @@ class Map:
             check_list=[img],
             timeout=1,
             interface_desc="星轨航图",
-            threshold=0.97,
+            threshold=STAR_MAP,
             offset=(1580, 0, 0, -910),
             allow_log=False,
         ):
             self.mouse_event.click_target(
-                key, 0.94, timeout=3, offset=(1660, 100, -40, -910), retry_in_map=False
+                key, BACK_BUTTON, timeout=3, offset=(1660, 100, -40, -910), retry_in_map=False
             )
         else:
             log.info("检测到星轨航图，不进行点击'返回'")
@@ -395,7 +410,7 @@ class Map:
             result_back = self.img.scan_screenshot(
                 target_back, offset=(1830, 0, 0, -975)
             )
-            if result_back["max_val"] > 0.99:
+            if result_back["max_val"] > MAP_BACK:
                 log.info("找到返回键")
                 points_back = self.img.img_center_point(result_back, target_back.shape)
                 pyautogui.click(points_back, clicks=1, interval=0.1)
@@ -425,7 +440,7 @@ class Map:
         """
         time.sleep(3)  # 增加识别延迟，避免偶现的识别错误
         result = self.img.scan_screenshot(target, offset=(530, 960, -1050, -50))
-        if result["max_val"] > 0.97:
+        if result["max_val"] > MAP_OPEN:
             points = self.img.img_center_point(result, target.shape)
             log.info(f"识别点位{points}，匹配度{result['max_val']:.3f}")
             if not self.map_statu_minimize:
