@@ -4,25 +4,25 @@ from utils.core.log import log
 from utils.core.thresholds import LOW_MATCH_REPORT_FLOOR
 from utils.core.map_info import MapInfo
 from utils.core.map_statu import MapStatu
-from utils.drivers.mouse_event import MouseEvent
+from utils.vision.img import Img
 from utils.core.time_utils import TimeUtils
 
 
 class Report:
-    def __init__(self, map_statu: MapStatu, map_info: MapInfo, handle: Handle, mouse_event: MouseEvent, time_utils: TimeUtils):
+    def __init__(self, map_statu: MapStatu, map_info: MapInfo, handle: Handle, img: Img, time_utils: TimeUtils):
         """
         初始化 Report 类
 
         :param map_statu: MapStatu 实例，用于获取地图状态信息
         :param map_info: MapInfo 实例，用于获取地图信息
         :param handle: Handle 实例，用于获取战斗和疾跑信息
-        :param mouse_event: MouseEvent 实例，用于获取鼠标事件信息
+        :param img: 识图对象，用于取「最相似图片」的匹配记录
         :param time_mgr: TimeMgr 实例，用于时间格式化
         """
         self.map_statu = map_statu
         self.map_info = map_info
         self.handle = handle
-        self.mouse_event = mouse_event
+        self.img = img
         self.time_mgr = time_utils
 
     def output_report(self):
@@ -65,7 +65,7 @@ class Report:
             log.info(f"黄泉模式，异常进入战斗：{self.map_statu.fight_in_map_list}")
 
         # 异常图片识别
-        log.debug(f"匹配值小于{LOW_MATCH_REPORT_FLOOR}的图片：{self.mouse_event.img_search_val_dict}")
+        log.debug(f"匹配值小于{LOW_MATCH_REPORT_FLOOR}的图片：{self.img.img_search_val_dict}")
 
         # 异常 F 键地图
         if hasattr(self.map_statu, 'map_f_key_error'):

@@ -7,7 +7,7 @@
 import cv2
 import numpy as np
 import pyautogui
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.drivers.window import Window
 import time
 

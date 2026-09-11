@@ -122,12 +122,14 @@ Fhoe-Rail/
 │  ├─ config/                 # 配置读写 + 完整性修复
 │  │  └─ config.py
 │  ├─ drivers/                # 【适配层】唯一允许碰 win32/pyautogui/pynput 的地方
+│  │  ├─ screen.py            #   截图（PrintWindow / ImageGrab），不 import cv2
 │  │  ├─ window.py            #   窗口查找 / 激活 / 矩形
-│  │  ├─ mouse_event.py       #   鼠标事件
-│  │  ├─ keyboard_event.py    #   键盘事件
-│  │  ├─ img.py               #   截图（⚠️ 仍含模板匹配，需拆分）
-│  │  └─ pause.py             #   F7~F10 热键监听
-│  ├─ vision/                 # 【识别层】唯一允许 import cv2 的地方
+│  │  ├─ mouse_event.py       #   鼠标与键盘输入原语（只做设备操作）
+│  │  └─ keyboard_event.py    #   按键按下/释放
+│  ├─ vision/                 # 【识别层】
+│  │  ├─ img.py               #   Img 门面：组合下面三者，全项目 129 处调用它
+│  │  ├─ matcher.py           #   模板匹配、界面判定、找到图就点它
+│  │  ├─ images.py            #   模板图加载与缓存
 │  │  ├─ blackscreen.py       #   黑屏判定
 │  │  ├─ get_angle.py         #   箭头朝向
 │  │  └─ mini_asu.py          #   小地图方向
@@ -138,10 +140,11 @@ Fhoe-Rail/
 │  │  ├─ calculated.py        #   加载检测 / 购买 / 1 号位
 │  │  ├─ monthly_pass.py      #   月卡
 │  │  └─ report.py            #   运行报告
-│  └─ ui/                     # 用户交互入口
+│  └─ ui/                     # 顶层（与 flows 平级）：交互入口
 │     ├─ setting.py           #   设置菜单
 │     ├─ map_selector.py      #   选图菜单
 │     ├─ text_window.py       #   开发者调试窗口
+│     ├─ pause.py             #   F7~F10 热键 + 调试图片显示
 │     └─ record.py            #   --record 录制模式（被 fhoe.py import）
 │
 ├─ tools/                     # 按路径调用的独立脚本（不是包，没有 __init__.py）
@@ -163,12 +166,12 @@ Fhoe-Rail/
 ### 2.2 依赖方向（已由测试强制）
 
 ```
-        flows/  ──→  ui/          ← 编排：可以依赖 vision / drivers / core
-          │        │
-          ↓        ↓
-       vision/  drivers/         ← 适配层：彼此不互相依赖
-          ↘        ↙
-             core/  +  config/   ← 最底层，被各层共用
+   flows/   ui/                ← 顶层：可以依赖下面全部（ui 要展示识别结果、响应热键）
+      │      │
+      ↓      ↓
+   vision/  drivers/            ← vision 可以依赖 drivers（识别要拿帧）；drivers 不能反向依赖
+      ↘      ↙
+      core/  +  config/         ← 最底层，被各层共用
 ```
 
 | 规则 | 状态 | 拦法 |
@@ -194,19 +197,28 @@ Fhoe-Rail/
 - ✅ 阈值集中到 `core/thresholds.py`（48 个常量，纯搬运不改数值；
   **来源仍待实测标定**，见 §1.2）
 - ✅ `tools/shutdown.py` 加 `__main__` 守卫（导入不再阻塞）
+- ✅ 拆 `drivers/img.py`：截图 → `drivers/screen.py`，图片资源 → `vision/images.py`，
+  匹配与「找到图就点它」→ `vision/matcher.py`，`Img` 变成组合三者的门面。
+  `MouseEvent` 相应退回纯输入层，`drivers/pause.py` 移到 `ui/`。
 
 接下来：
 
-1. **拆 `drivers/img.py`**：截图部分留 drivers，模板匹配搬 `vision/matcher.py`。
-   这一步做完，`drivers` 与 `vision` 的棘轮名单能缩短一大截。→ 1 天
-2. **把 `win32api` 从 `flows/handle.py` 赶出去**，改调 `drivers`。
+1. **把 `win32api` 从 `flows/handle.py` 赶出去**，改调 `drivers`。
    这是后续所有测试的地基。→ 2–3 天
-3. **拆 `Handle`**（1150 行 / 44 方法）成 `flows/combat.py` + `flows/orientation.py`。
+2. **拆 `Handle`**（1150 行 / 44 方法）成 `flows/combat.py` + `flows/orientation.py`。
    → 3–5 天，风险最高，放最后
-4. **给 `core/thresholds.py` 补实测来源**（CLAUDE.md §1.2 的那张表）。
+3. **给 `core/thresholds.py` 补实测来源**（CLAUDE.md §1.2 的那张表）。
    没有它，48 个常量仍然只能靠猜——这是目前最大的单项技术债。
 
-每完成一步，`tests/test_architecture.py` 的棘轮名单就缩短一行。**名单长度就是技术债的刻度尺。**
+**关于棘轮**：拆 `img.py` 并没有像原计划那样让 `OS_INPUT_ALLOWLIST` /
+`VISION_ALLOWLIST` 大幅缩短 —— 因为瓶颈从来不是 `img.py` 本身，而是
+`flows/` 那几处（handle / map / calculated / monthly_pass）直接用 `cv2` 和
+`pyautogui`。那要靠上面第 1、2 步才能解决。这次的收益是结构性的，
+不是名单长度。
+
+每完成一步，先看 `tests/test_architecture.py` 的棘轮名单能不能缩短——能缩短就缩短，
+不能缩短也没关系：**名单长度只是技术债的一个侧面指标，不是唯一目标。**
+更重要的是结构本身变清楚了（一个模块一件事、边界能被测试钉住）。
 
 ---
 

@@ -10,7 +10,7 @@ from utils.core.thresholds import (
     MONTHLY_PASS_NO_PASS,
 )
 from utils.config.config import ConfigurationManager
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.drivers.mouse_event import MouseEvent
 
 

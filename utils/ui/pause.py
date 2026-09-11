@@ -4,7 +4,7 @@ from typing import Union
 import keyboard
 import cv2
 
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.core.log import log
 
 # 模块级保存已注册的键盘监听器，避免每张地图 new Pause() 时重复注册导致监听器泄漏

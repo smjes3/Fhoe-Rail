@@ -5,8 +5,8 @@ import time
 
 import pytest
 
-import utils.drivers.pause as pause_module
-from utils.drivers.pause import _INSTALLED_HANDLERS, Pause
+import utils.ui.pause as pause_module
+from utils.ui.pause import _INSTALLED_HANDLERS, Pause
 
 
 class StubKeyboard:
@@ -185,7 +185,7 @@ class TestShowImg:
     def test_skips_when_image_missing(self, keyboard, monkeypatch):
         pause = Pause(dev=False)
         pause.pause_event.set()
-        monkeypatch.setattr("utils.drivers.pause.Img.get_img", staticmethod(lambda path: None))
+        monkeypatch.setattr("utils.ui.pause.Img.get_img", staticmethod(lambda path: None))
 
         pause.pause_event.clear()
         pause._show_img("x.png")  # 不应抛出
@@ -195,7 +195,7 @@ class TestShowImg:
 
         pause = Pause(dev=False)
         monkeypatch.setattr(
-            "utils.drivers.pause.Img.get_img",
+            "utils.ui.pause.Img.get_img",
             staticmethod(lambda path: np.zeros((4, 4, 3), dtype=np.uint8)),
         )
         pause.pause_event.set()

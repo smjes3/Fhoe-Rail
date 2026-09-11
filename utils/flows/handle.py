@@ -15,7 +15,7 @@ import win32con
 
 from utils.config.config import ConfigurationManager
 from utils.core.exceptions import CustomException
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.drivers.keyboard_event import KeyboardEvent
 from utils.core.log import log
 from utils.core.thresholds import (
@@ -333,7 +333,7 @@ class Handle(metaclass=SingletonMeta):
                             ):
                                 find = True
                                 for _ in range(2):
-                                    self.mouse_event.click_target(
+                                    self.img.click_target(
                                         "./picture/qiqiao.png",
                                         QIQIAO_ICON,
                                         True,
@@ -348,7 +348,7 @@ class Handle(metaclass=SingletonMeta):
                                         threshold=QIQIAO_LAB,
                                     ):
                                         time.sleep(0.1)
-                                        self.mouse_event.click_target(
+                                        self.img.click_target(
                                             "./picture/round.png", SNACK_CRAFT_BUTTON, timeout=8
                                         )
                                         self.snack_used += 1
@@ -360,7 +360,7 @@ class Handle(metaclass=SingletonMeta):
                                 time.sleep(0.5)
                                 drag += 1
                         time.sleep(1)
-                    self.mouse_event.click_target(
+                    self.img.click_target(
                         "./picture/cancel.png", CANCEL_BUTTON, timeout=2
                     )
                     time.sleep(0.1)
@@ -371,7 +371,7 @@ class Handle(metaclass=SingletonMeta):
                         log.info("补E结束")
                         time.sleep(0.25)
                 else:
-                    self.mouse_event.click_target(
+                    self.img.click_target(
                         "./picture/cancel.png", CANCEL_BUTTON, timeout=2
                     )
                     time.sleep(0.1)
@@ -432,13 +432,13 @@ class Handle(metaclass=SingletonMeta):
             time.sleep(2)
 
             # 通过识图，选择设置
-            if not self.mouse_event.click_target("picture\\setting_icon.png", SETTING_ICON):
+            if not self.img.click_target("picture\\setting_icon.png", SETTING_ICON):
                 log.warning("未找到设置图标")
                 return False
             time.sleep(1)
 
             # 通过识图，选择其他设置
-            if not self.mouse_event.click_target("picture\\setting_other.png", SETTING_OPTION):
+            if not self.img.click_target("picture\\setting_other.png", SETTING_OPTION):
                 log.warning("未找到其他设置选项")
                 return False
             time.sleep(0.5)
@@ -449,7 +449,7 @@ class Handle(metaclass=SingletonMeta):
             )
 
             # 点击自动使用消耗品开关
-            if not self.mouse_event.click_target(
+            if not self.img.click_target(
                 "picture\\auto_use_technique_consumable.png", TECHNIQUE_CONSUMABLE
             ):
                 log.warning("未找到自动使用消耗品选项")
@@ -457,7 +457,7 @@ class Handle(metaclass=SingletonMeta):
             time.sleep(1)
 
             # 通过识图，选择"是"确认
-            if not self.mouse_event.click_target("picture\\setting_yes.png", SETTING_CONFIRM):
+            if not self.img.click_target("picture\\setting_yes.png", SETTING_CONFIRM):
                 log.warning("未找到确认按钮")
                 return False
             time.sleep(0.5)
@@ -1116,13 +1116,13 @@ class Handle(metaclass=SingletonMeta):
                     not_auto_result_c = self.img.scan_screenshot(not_auto_c)
 
             if elapsed_time > 90:
-                # self.mouse_event.click_target("./picture/auto.png", 0.98, False)
-                self.mouse_event.click_target(
+                # self.img.click_target("./picture/auto.png", 0.98, False)
+                self.img.click_target(
                     "./picture/continue_fighting.png", CONTINUE_FIGHTING, False
                 )
-                self.mouse_event.click_target("./picture/defeat.png", DEFEAT, False)
-                # self.mouse_event.click_target("./picture/map_4-2_point_3.png", 0.98, False)
-                # self.mouse_event.click_target("./picture/orientation_close.png", 0.98, False)
+                self.img.click_target("./picture/defeat.png", DEFEAT, False)
+                # self.img.click_target("./picture/map_4-2_point_3.png", 0.98, False)
+                # self.img.click_target("./picture/orientation_close.png", 0.98, False)
                 if elapsed_time > 600:
                     log.info("战斗超时")
                     return True

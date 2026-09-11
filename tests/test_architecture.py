@@ -32,12 +32,13 @@ TOOLS = "tools"
 #
 # 依赖单向向下：flows → vision | drivers → core，config 是被各层共用的横切包。
 # core 可以依赖 config（配置读取），但 config 也只依赖 core，二者同在底层。
+# ui 是顶层（和 flows 平级）：它要展示识别结果、响应热键，所以可以依赖 vision/drivers。
 ALLOWED_LAYER_IMPORTS = {
     CORE: {CORE, CONFIG},
     CONFIG: {CONFIG, CORE},
     DRIVERS: {DRIVERS, CORE, CONFIG},
     VISION: {VISION, DRIVERS, CORE, CONFIG},
-    UI: {UI, CORE, CONFIG},
+    UI: {UI, VISION, DRIVERS, CORE, CONFIG},
     FLOWS: {FLOWS, UI, VISION, DRIVERS, CORE, CONFIG},
     TOOLS: {TOOLS, CORE, CONFIG, DRIVERS, VISION, UI, FLOWS},
 }
@@ -59,7 +60,7 @@ OS_INPUT_LIBS = {
 VISION_LIBS = {"cv2"}
 
 # 理想态：只有 drivers/ 直接碰 OS 输入与窗口。
-# 现状：flows/ 与 vision/ 里还有直接调用，迁移顺序见 CLAUDE.md §2.3 第 4 步。
+# 现状：flows/ 与 vision/、ui/ 里还有直接调用，迁移顺序见 CLAUDE.md §2.3。
 OS_INPUT_ALLOWLIST = {
     "fhoe.py",
     f"{FLOWS}/calculated.py",
@@ -67,26 +68,26 @@ OS_INPUT_ALLOWLIST = {
     f"{FLOWS}/map.py",
     f"{FLOWS}/map_operations.py",
     f"{VISION}/get_angle.py",
-    f"{DRIVERS}/img.py",
+    f"{UI}/pause.py",
+    f"{UI}/record.py",
     f"{DRIVERS}/keyboard_event.py",
     f"{DRIVERS}/mouse_event.py",
-    f"{DRIVERS}/pause.py",
+    f"{DRIVERS}/screen.py",
     f"{DRIVERS}/window.py",
-    f"{UI}/record.py",
 }
 
 # 理想态：只有 vision/ 直接 import cv2。
 VISION_ALLOWLIST = {
     f"{VISION}/blackscreen.py",
     f"{VISION}/get_angle.py",
+    f"{VISION}/images.py",
+    f"{VISION}/matcher.py",
     f"{VISION}/mini_asu.py",
     f"{FLOWS}/calculated.py",
     f"{FLOWS}/handle.py",
     f"{FLOWS}/map.py",
     f"{FLOWS}/monthly_pass.py",
-    f"{DRIVERS}/img.py",
-    f"{DRIVERS}/mouse_event.py",
-    f"{DRIVERS}/pause.py",
+    f"{UI}/pause.py",
 }
 
 # 理想态：只剩 core/log.py（日志初始化必须最早执行）。
@@ -119,11 +120,19 @@ def source_files():
         yield path.relative_to(REPO_ROOT).as_posix(), path.read_text(encoding="utf-8")
 
 
+LAYER_DIRS = {CORE, CONFIG, DRIVERS, VISION, UI, FLOWS}
+
+
 def layer_of(rel_path):
+    """把 `utils/vision/img.py`、`utils.vision`、`tools/x.py` 都映射到所属层。
+
+    注意要处理两段形式：`from utils.vision import images` 给出的模块名是
+    `utils.vision`，按分隔符切只有两段，容易被误判成 `utils` 自身。
+    """
     parts = rel_path.split("/")
-    if parts[0] == "utils" and len(parts) > 2:
-        return "/".join(parts[:2])
     if parts[0] == "utils":
+        if len(parts) >= 2 and f"utils/{parts[1]}" in LAYER_DIRS:
+            return f"utils/{parts[1]}"
         return "utils"
     return parts[0]
 

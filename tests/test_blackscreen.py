@@ -7,7 +7,7 @@ import pytest
 
 import utils.vision.blackscreen as blackscreen_module
 from utils.vision.blackscreen import BlackScreen
-from utils.drivers.img import Img
+from utils.vision.img import Img
 
 
 def stub_img(screenshot=None, scan_max_val=None):

@@ -6,7 +6,7 @@ import pyautogui
 from utils.vision.blackscreen import BlackScreen
 from utils.config.config import ConfigurationManager
 from utils.flows.handle import Handle
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.core.map_info import MapInfo
 from utils.flows.monthly_pass import MonthlyPass
 from utils.drivers.mouse_event import MouseEvent
@@ -332,7 +332,7 @@ class Map:
         else:
             orientation_delay = 2
             while True:
-                self.mouse_event.click_target(
+                self.img.click_target(
                     key, ORIENTATION_ICON, retry_in_map=self.allow_retry_in_map_switch
                 )
                 orientation_delay = min(orientation_delay, 4)
@@ -352,7 +352,7 @@ class Map:
             self.find_transfer_point(
                 key, threshold=PLANET, offset=self.drag_offset, exact=self.drag_exact
             )
-            if self.mouse_event.click_target(key, PLANET_CLICK, delay=0.1):
+            if self.img.click_target(key, PLANET_CLICK, delay=0.1):
                 time.sleep(5)
                 img = Img.get_img("./picture/kaituoli_1.png")
                 delay_time = 0.5
@@ -372,7 +372,7 @@ class Map:
                     log.info(
                         f"检测到未成功点击星球，尝试重试点击星球，鼠标点击间隔时间 {delay_time}"
                     )
-                    self.mouse_event.click_target(key, PLANET_CLICK, delay=delay_time)
+                    self.img.click_target(key, PLANET_CLICK, delay=delay_time)
                     time.sleep(5)
                 else:
                     self.planet = key
@@ -381,7 +381,7 @@ class Map:
     def handle_floor(self, key):
         """点击楼层"""
         if self.img.img_bitwise_check(target_path=key, offset=(30, 740, -1820, -70)):
-            self.mouse_event.click_target(key, FLOOR_BUTTON, offset=(30, 740, -1820, -70))
+            self.img.click_target(key, FLOOR_BUTTON, offset=(30, 740, -1820, -70))
         else:
             log.info("已在对应楼层，跳过选择楼层")
 
@@ -396,7 +396,7 @@ class Map:
             offset=(1580, 0, 0, -910),
             allow_log=False,
         ):
-            self.mouse_event.click_target(
+            self.img.click_target(
                 key, BACK_BUTTON, timeout=3, offset=(1660, 100, -40, -910), retry_in_map=False
             )
         else:

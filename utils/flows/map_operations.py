@@ -10,7 +10,7 @@ from utils.flows.calculated import Calculated
 from utils.config.config import ConfigurationManager
 from utils.ui.text_window import show_text, start_tkinter_thread, TEXT_WINDOWS
 from utils.flows.handle import Handle
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.core.log import log
 from utils.core.thresholds import (
     BUY_ICON,
@@ -28,7 +28,7 @@ from utils.core.map_info import MapInfo
 from utils.core.map_statu import MapStatu
 from utils.flows.monthly_pass import MonthlyPass
 from utils.drivers.mouse_event import MouseEvent
-from utils.drivers.pause import Pause
+from utils.ui.pause import Pause
 from utils.core.time_utils import TimeUtils
 from utils.drivers.window import Window
 from utils.flows.report import Report
@@ -52,7 +52,7 @@ class MapOperations:
         self.calculated = Calculated()
         self.monthly_pass = MonthlyPass()
         self.report = Report(self.map_statu, self.map_info,
-                             self.handle, self.mouse_event, self.time_mgr)
+                             self.handle, self.img, self.time_mgr)
 
         self.now = datetime.datetime.now()
 
@@ -255,14 +255,14 @@ class MapOperations:
                 elif key == "picture\\max.png":
                     if self.calculated.allow_buy_item():
                         self.map_statu.skip_this_map = False
-                        self.mouse_event.click_target(key, BUY_ICON)
+                        self.img.click_target(key, BUY_ICON)
                         continue
                     else:
                         self.map_statu.skip_this_map = True
                         break
                 elif key in ["picture\\transfer.png"]:
                     time.sleep(0.2)
-                    if not self.mouse_event.click_target(key, TRANSFER_ICON):
+                    if not self.img.click_target(key, TRANSFER_ICON):
                         self.map_statu.skip_this_map = True
                         break
                     self.calculated.run_mapload_check()
@@ -288,7 +288,7 @@ class MapOperations:
                         self.map.handle_back(key)
                     elif key.startswith("picture\\check_4-1_point"):
                         self.map.find_transfer_point(key, threshold=DREAM_MACHINE, exact=self.map.drag_exact, offset=self.map.drag_offset)
-                        if self.mouse_event.click_target(key, DREAM_MACHINE, retry_in_map=False):
+                        if self.img.click_target(key, DREAM_MACHINE, retry_in_map=False):
                             log.info("筑梦机关检查通过")
                         else:
                             log.info("筑梦机关检查不通过，请将机关调整到正确的位置上")
@@ -296,13 +296,13 @@ class MapOperations:
                         time.sleep(1)
                     elif key == "picture\\map_4-1_point_2.png":  # 筑梦边境尝试性修复
                         self.map.find_transfer_point(key, threshold=DREAM_POINT, exact=self.map.drag_exact, offset=self.map.drag_offset)
-                        self.mouse_event.click_target(key, DREAM_POINT_CLICK)
+                        self.img.click_target(key, DREAM_POINT_CLICK)
                         self.map_statu.temp_point = key
                     elif key == "picture\\orientation_1.png":
                         self.map.handle_orientation(key, map_data)
                     elif key.startswith("picture\\map_4-3_point"):
                         self.map.find_transfer_point(key, threshold=DREAM_POINT, exact=self.map.drag_exact, offset=self.map.drag_offset)
-                        self.mouse_event.click_target(key, TELEPORT_POINT)
+                        self.img.click_target(key, TELEPORT_POINT)
                         self.map_statu.temp_point = key
                         time.sleep(1.7)
                     elif key in self.map.planet_png_lst:
@@ -315,10 +315,10 @@ class MapOperations:
                             self.map.find_scene(key, threshold=DREAM_SCENE)
                         if self.img.on_main_interface(timeout=0.5, allow_log=False):
                             log.info("执行alt")
-                            self.mouse_event.click_target_with_alt(
+                            self.mouse_event.click_target_with_alt(self.img, 
                                 key, TELEPORT_POINT, clicks=self.map.multi_click)
                         else:
-                            self.mouse_event.click_target(
+                            self.img.click_target(
                                 key, TELEPORT_POINT, clicks=self.map.multi_click, retry_in_map=self.map.allow_retry_in_map_switch)
                         self.map_statu.temp_point = key
                     self.map_statu.teleport_click_count += 1
@@ -376,7 +376,7 @@ class MapOperations:
                         self.window.switch_window()
                         time.sleep(1)
                         if press_key == 'F9':
-                            self.mouse_event.click_target(
+                            self.img.click_target(
                                 "picture\\transfer.png", TRANSFER_ICON)
                             self.calculated.run_mapload_check()
                         if press_key == 'F10':

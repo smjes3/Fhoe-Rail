@@ -1,31 +1,24 @@
 import ctypes
 import time
 
-import cv2
 import pyautogui
 import win32api
 import win32con
 
 from utils.config.config import ConfigurationManager
-from utils.drivers.img import Img
 from utils.core.log import log
-from utils.core.thresholds import (
-    LOW_MATCH_REPORT_FLOOR,
-)
 from utils.core.singleton import SingletonMeta
 from utils.drivers.window import Window
 
 
 class MouseEvent(metaclass=SingletonMeta):
     def __init__(self):
-        self.img = Img()
         self.window = Window()
         self.cfg = ConfigurationManager()
 
-        self.img_search_val_dict = {}  # 图片匹配值
         # 上一次 click_target 超时时，调用方是否允许重试整张地图。
-        # 由 click_target 写入、由 flows/map_operations 读取；放在 MouseEvent（单例）
-        # 上而不是 Img 上，是因为读的一方持有的是 MouseEvent 引用（见 img.py 的说明）。
+        # 由 vision/matcher.click_target 写入、由 flows/map_operations 读取 ——
+        # 读的一方持有 self.mouse_event，所以标志放在这里（见 CLAUDE.md R13）。
         self.last_search_allow_retry = False
         self.multi_num = 1
         try:
@@ -140,108 +133,20 @@ class MouseEvent(metaclass=SingletonMeta):
             x, y = int((left + right) / 2), int((top + bottom) / 2)
             self.mouse_press(x, y)
 
-    def click_target_above_threshold(
-        self, target, threshold, offset, clicks=1, delay=0.05
-    ):
-        """
-        尝试点击匹配度大于阈值的目标图像。
-        参数:
-            :param target: 目标图像
-            :param threshold: 匹配阈值
-            :param offset: 左、上、右、下，正值为向右或向下偏移
-            :param clicks: 连续点击次数
-        返回:
-            :return: 是否点击成功
-        """
-        result = self.img.scan_screenshot(target, offset)
-        if result["max_val"] > threshold:
-            points = self.img.img_center_point(result, target.shape)
-            self.click(points, result["max_val"], clicks, delay)
-            return True, result["max_val"]
-        return False, result["max_val"]
-
-    def click_target(
-        self,
-        target_path,
-        threshold,
-        flag=True,
-        timeout=30.0,
-        offset=(0, 0, 0, 0),
-        retry_in_map: bool = True,
-        clicks=1,
-        delay=0.05,
-    ):
-        """
-        说明：
-            点击指定图片
-        参数：
-            :param target_path:图片地址
-            :param threshold:匹配阈值
-            :param flag:True为一定要找到图片
-            :param timeout: 最大搜索时间（秒）
-            :param offset: 左、上、右、下，正值为向右或向下偏移
-            :param retry_in_map: 是否允许地图中重试查找
-            :param clicks: 连续点击次数
-        返回：
-            :return 是否点击成功
-        """
-        # 定义目标图像与颜色反转后的图像
-        original_target = Img.get_img(target_path)
-        if original_target is None:
-            log.error(f"图片不存在: {target_path}")
-            return False
-        inverted_target = cv2.bitwise_not(original_target)
-        start_time = time.time()
-
-        while time.time() - start_time < timeout:
-            click_it, img_search_val = self.click_target_above_threshold(
-                original_target, threshold, offset, clicks, delay
-            )
-            if click_it:
-                return True
-            if (
-                time.time() - start_time > 1
-            ):  # 如果超过1秒，同时匹配原图像和颜色反转后的图像
-                click_it, _ = self.click_target_above_threshold(
-                    inverted_target, threshold, offset, clicks, delay
-                )
-                if click_it:
-                    log.info("阴阳变转")
-                    return True
-
-            # 持续记录最低匹配值（低于0.99时），供报告输出“最相似图片”参考
-            if img_search_val < LOW_MATCH_REPORT_FLOOR:
-                if target_path in self.img_search_val_dict:
-                    if img_search_val < self.img_search_val_dict[target_path]:
-                        self.img_search_val_dict[target_path] = img_search_val
-                else:
-                    self.img_search_val_dict[target_path] = img_search_val
-
-            if not flag:  # 是否一定要找到
-                return False
-            time.sleep(0.5)  # 添加短暂延迟避免性能消耗
-
-        log.info(
-            f"查找图片超时 {target_path} ，最相似图片匹配值 {img_search_val}，所需匹配值 {threshold}"
-        )
-        # 只有超时这一条路径会写入：提前返回（flag=False）与图片缺失都不算「可重试的失败」
-        self.last_search_allow_retry = retry_in_map
-        return False
-
-    def click_target_with_alt(self, target_path, threshold, flag=True, clicks=1):
+    def click_target_with_alt(self, matcher, target_path, threshold, flag=True, clicks=1):
         """
         说明：
             按下alt，点击指定图片，释放alt
+
+        ALT 的按下/释放属于本层（输入设备），「找到图就点」属于 vision 层，
+        所以搜索器由调用方传入而不是自己持有 —— 否则 drivers 就要反向依赖 vision。
+
         参数：
+            :param matcher: 提供 click_target 的识图对象（通常是 Img 门面）
             :param target_path: 图片地址
             :param threshold: 匹配阈值
             :param flag: True为必须找到图片
             :param clicks: 连续点击次数
-        改进：
-            1. 使用成对的按下/释放标志
-            2. 增加异常处理确保ALT释放
-            3. 优化延时逻辑
-            4. 添加键盘状态恢复机制
         """
         initial_state = win32api.GetKeyState(win32con.VK_MENU)
         log.debug(f"ALT初始状态: {initial_state}")
@@ -250,7 +155,7 @@ class MouseEvent(metaclass=SingletonMeta):
             win32api.keybd_event(win32con.VK_MENU, 0, win32con.KEYEVENTF_EXTENDEDKEY, 0)
             time.sleep(0.15)
 
-            self.click_target(target_path, threshold, flag, clicks=clicks)
+            matcher.click_target(target_path, threshold, flag, clicks=clicks)
 
         except Exception as e:
             if flag:

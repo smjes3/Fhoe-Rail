@@ -1,13 +1,13 @@
 """utils/drivers/mouse_event.py —— 点击、拖拽、识图点击与视角旋转。"""
 
-import numpy as np
+from types import SimpleNamespace
+
 import pytest
 import win32api
 import win32con
 
 import utils.drivers.mouse_event as mouse_event_module
 from utils.config.config import ConfigurationManager
-from utils.drivers.img import Img
 from utils.drivers.mouse_event import MouseEvent
 
 
@@ -111,109 +111,6 @@ class TestMousePressAlt:
         assert flags == [0, win32con.KEYEVENTF_KEYUP], "ALT 必须被释放，否则键盘会卡住"
 
 
-class TestClickTargetAboveThreshold:
-    def test_clicks_and_reports_success(self, make_instance):
-        event = make_instance(MouseEvent)
-        event.img = StubImg(max_val=0.95, point=(11, 22))
-        clicked = []
-        event.click = lambda points, slot, clicks, delay: clicked.append(points)
-
-        ok, value = event.click_target_above_threshold(
-            np.zeros((4, 4, 3), np.uint8), 0.9, (0, 0, 0, 0)
-        )
-
-        assert ok is True
-        assert value == 0.95
-        assert clicked == [(11, 22)]
-
-    def test_does_not_click_below_threshold(self, make_instance):
-        event = make_instance(MouseEvent)
-        event.img = StubImg(max_val=0.5)
-        clicked = []
-        event.click = lambda *args: clicked.append(args)
-
-        ok, value = event.click_target_above_threshold(
-            np.zeros((4, 4, 3), np.uint8), 0.9, (0, 0, 0, 0)
-        )
-
-        assert ok is False
-        assert value == 0.5
-        assert clicked == []
-
-
-class TestClickTarget:
-    @pytest.fixture
-    def event(self, make_instance, monkeypatch):
-        instance = make_instance(MouseEvent, img_search_val_dict={})
-        monkeypatch.setattr(
-            Img, "get_img", staticmethod(lambda path: np.zeros((4, 4, 3), np.uint8))
-        )
-        return instance
-
-    def test_missing_image_returns_false(self, make_instance, monkeypatch, log_records):
-        instance = make_instance(MouseEvent, img_search_val_dict={})
-        monkeypatch.setattr(Img, "get_img", staticmethod(lambda path: None))
-
-        assert instance.click_target("gone.png", 0.9) is False
-        assert any(r["level"].name == "ERROR" for r in log_records)
-
-    def test_returns_true_on_first_match(self, event):
-        event.click_target_above_threshold = lambda *args: (True, 0.99)
-        assert event.click_target("x.png", 0.9) is True
-
-    def test_flag_false_stops_after_first_miss(self, event):
-        event.click_target_above_threshold = lambda *args: (False, 0.5)
-        assert event.click_target("x.png", 0.9, flag=False) is False
-
-    def test_keeps_lowest_match_value_for_reporting(self, event):
-        """报告里的“最相似图片”取历史最低匹配值。"""
-        event.img_search_val_dict["x.png"] = 0.8
-        event.click_target_above_threshold = lambda *args: (False, 0.7)
-
-        event.click_target("x.png", 0.9, flag=False)
-
-        assert event.img_search_val_dict["x.png"] == 0.7
-
-    def test_does_not_raise_a_recorded_lower_value(self, event):
-        event.img_search_val_dict["x.png"] = 0.5
-        event.click_target_above_threshold = lambda *args: (False, 0.7)
-
-        event.click_target("x.png", 0.9, flag=False)
-
-        assert event.img_search_val_dict["x.png"] == 0.5
-
-    def test_close_matches_are_not_recorded(self, event):
-        event.click_target_above_threshold = lambda *args: (False, 0.995)
-
-        event.click_target("x.png", 0.9, flag=False)
-
-        assert "x.png" not in event.img_search_val_dict
-
-    def test_falls_back_to_inverted_image_after_one_second(
-        self, event, monkeypatch
-    ):
-        """原图匹配不上时，1 秒后改用颜色反转图（“阴阳变转”）。"""
-        calls = []
-
-        def fake(target, threshold, offset, clicks, delay):
-            calls.append(target)
-            return len(calls) == 2, 0.5
-
-        event.click_target_above_threshold = fake
-        monkeypatch.setattr(mouse_event_module, "time", FakeTime([0, 0, 2]))
-
-        assert event.click_target("x.png", 0.9, timeout=10) is True
-        assert len(calls) == 2
-
-    @pytest.mark.xfail(
-        strict=True,
-        reason="timeout 为 0（或极小）时 while 循环体一次都不执行，"
-        "结尾的日志会读未赋值的 img_search_val，抛 UnboundLocalError 而不是返回 False",
-    )
-    def test_zero_timeout_returns_false(self, event):
-        assert event.click_target("x.png", 0.9, timeout=0) is False
-
-
 class TestClickTargetWithAlt:
     def test_presses_and_releases_alt(self, monkeypatch, make_instance):
         state = {"pressed": False}
@@ -231,9 +128,9 @@ class TestClickTargetWithAlt:
         monkeypatch.setattr(mouse_event_module, "time", FakeTime())
 
         event = make_instance(MouseEvent)
-        event.click_target = lambda *args, **kwargs: True
+        matcher = SimpleNamespace(click_target=lambda *args, **kwargs: True)
 
-        event.click_target_with_alt("x.png", 0.9)
+        event.click_target_with_alt(matcher, "x.png", 0.9)
 
         assert flags[0] == win32con.KEYEVENTF_EXTENDEDKEY
         assert any(value & win32con.KEYEVENTF_KEYUP for value in flags)

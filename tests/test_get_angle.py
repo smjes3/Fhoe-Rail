@@ -5,7 +5,7 @@ import pytest
 
 import utils.vision.get_angle as get_angle_module
 from utils.vision.get_angle import get_angle, get_furthest_point
-from utils.drivers.img import Img
+from utils.vision.img import Img
 
 CYAN_BGR = (255, 255, 0)  # OpenCV HSV 下 H=90，落在青色掩膜区间
 X0, Y0, SIZE = 117, 128, 47

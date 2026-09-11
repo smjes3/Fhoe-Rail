@@ -32,7 +32,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from utils.config.config import ConfigurationManager  # noqa: E402
-from utils.drivers.img import Img  # noqa: E402
+from utils.vision import images as image_library  # noqa: E402
 from utils.core.log import logger  # noqa: E402
 from utils.core.map_info import MapInfo  # noqa: E402
 from utils.core.singleton import SingletonMeta  # noqa: E402
@@ -71,11 +71,11 @@ def _reset_global_state():
     """清空单例与类级缓存，保证测试互相独立。"""
     SingletonMeta._instances.clear()
     MapInfo._maps_cache.clear()
-    Img._IMG_CACHE.clear()
+    image_library.clear_cache()
     yield
     SingletonMeta._instances.clear()
     MapInfo._maps_cache.clear()
-    Img._IMG_CACHE.clear()
+    image_library.clear_cache()
 
 
 @pytest.fixture(autouse=True)

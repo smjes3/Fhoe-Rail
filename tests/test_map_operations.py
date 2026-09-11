@@ -8,7 +8,7 @@ import pytest
 
 import utils.flows.map_operations as operations_module
 from utils.config.config import ConfigurationManager
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.flows.map_operations import MapOperations
 from utils.core.map_statu import MapStatu
 from utils.core.time_utils import TimeUtils
@@ -292,14 +292,14 @@ class TestRetryFlagPlumbing:
 
     def test_img_is_a_singleton(self, monkeypatch, fake_window_factory):
         monkeypatch.setattr(
-            "utils.drivers.img.Window", lambda *args, **kwargs: fake_window_factory()
+            "utils.drivers.screen.Window", lambda *args, **kwargs: fake_window_factory()
         )
         assert Img() is Img(), "7 处 Img() 应共用同一实例"
 
     def test_flag_no_longer_lives_on_img(self, monkeypatch, fake_window_factory):
         """钉住这次的教训：不要把跨模块状态放到 Img 上。"""
         monkeypatch.setattr(
-            "utils.drivers.img.Window", lambda *args, **kwargs: fake_window_factory()
+            "utils.drivers.screen.Window", lambda *args, **kwargs: fake_window_factory()
         )
         assert not hasattr(Img(), "search_img_allow_retry")
 
@@ -326,20 +326,21 @@ class TestRetryFlagPlumbing:
             game_map.allow_retry_in_map_switch = retry_in_map
 
             mouse = MouseRecorder(result=not click_times_out)
+            img = ImgRecorder(result=not click_times_out)
 
             def click_target(*args, **kwargs):
-                mouse.calls.append(("click_target", args, kwargs))
+                img.calls.append(("click_target", args, kwargs))
                 if click_times_out:
-                    # 复刻 mouse_event.click_target 超时分支的写标志行为
+                    # 复刻 matcher.click_target 超时分支的写标志行为
                     mouse.last_search_allow_retry = kwargs.get("retry_in_map", True)
                 return not click_times_out
 
-            mouse.click_target = click_target
+            img.click_target = click_target
             operations.handle = RecordingHandle()
             operations.map = game_map
             operations.calculated = CalculatedRecorder()
             operations.mouse_event = mouse
-            operations.img = SimpleNamespace(on_main_interface=lambda **kwargs: False)
+            operations.img = img
             operations.process_single_map_start(0, "map_1-1_0.json")
             return operations.map_statu
 
@@ -384,7 +385,7 @@ class TestRetryFlagPlumbing:
         operations.map = MapStub()
         operations.calculated = CalculatedRecorder()
         operations.mouse_event = mouse
-        operations.img = SimpleNamespace(on_main_interface=lambda **kwargs: False)
+        operations.img = ImgRecorder()
         operations.process_single_map_start(0, "map_1-1_0.json")
 
         assert mouse.last_search_allow_retry is False
@@ -437,21 +438,36 @@ class CalculatedRecorder:
 
 
 class MouseRecorder:
-    """MouseEvent 的替身，记录点击调用。"""
+    """MouseEvent 的替身：只记录输入侧动作。
+
+    「找到图就点它」一族（click_target / click_target_above_threshold）
+    2026-09 搬到了 vision 层，替身在 ImgRecorder 那边。
+    """
 
     def __init__(self, result=True):
         self.calls = []
         self.result = result
-        # click_target 超时时由 mouse_event 写入，由 map_operations 读取
+        # click_target 超时时由 vision/matcher 写入，由 map_operations 读取
         self.last_search_allow_retry = False
+
+    def click_target_with_alt(self, matcher, *args, **kwargs):
+        self.calls.append(("click_target_with_alt", args, kwargs))
+        return self.result
+
+
+class ImgRecorder:
+    """Img 门面的替身：识图与点击都在这一侧。"""
+
+    def __init__(self, result=True):
+        self.calls = []
+        self.result = result
 
     def click_target(self, *args, **kwargs):
         self.calls.append(("click_target", args, kwargs))
         return self.result
 
-    def click_target_with_alt(self, *args, **kwargs):
-        self.calls.append(("click_target_with_alt", args, kwargs))
-        return self.result
+    def on_main_interface(self, **kwargs):
+        return False
 
 
 class TestStartStepDispatch:
@@ -484,17 +500,19 @@ class TestStartStepDispatch:
             game_map = MapStub(planet_png_lst=planet_png_lst)
             calculated = CalculatedRecorder(allow_buy=allow_buy)
             mouse = MouseRecorder(result=click_ok)
+            img = ImgRecorder(result=click_ok)
             operations.handle = handle
             operations.map = game_map
             operations.calculated = calculated
             operations.mouse_event = mouse
-            operations.img = SimpleNamespace(on_main_interface=lambda **k: False)
+            operations.img = img
             operations.process_single_map_start(0, "map_1-1_0.json")
             return SimpleNamespace(
                 handle=handle,
                 map=game_map,
                 calculated=calculated,
                 mouse=mouse,
+                img=img,
                 pressed=list(pressed),
                 statu=operations.map_statu,
             )
@@ -562,16 +580,16 @@ class TestStartStepDispatch:
         result = run({"picture\\max.png": 1})
         assert result.calculated.calls == ["allow_buy_item"]
         assert result.statu.skip_this_map is False
-        assert result.mouse.calls[0][0] == "click_target"
+        assert result.img.calls[0][0] == "click_target"
 
     def test_max_picture_skips_map_when_cannot_buy(self, run):
         result = run({"picture\\max.png": 1}, allow_buy=False)
         assert result.statu.skip_this_map is True
-        assert result.mouse.calls == []
+        assert result.img.calls == []
 
     def test_transfer_picture_runs_loading_check_after_click(self, run):
         result = run({"picture\\transfer.png": 1})
-        assert result.mouse.calls[0][0] == "click_target"
+        assert result.img.calls[0][0] == "click_target"
         assert result.calculated.calls == ["run_mapload_check"]
 
     def test_transfer_picture_skips_map_when_click_fails(self, run):
@@ -605,7 +623,7 @@ class TestStartStepDispatch:
         result = run({"picture\\unknown_point.png": 1})
         assert result.map.called("find_transfer_point") == []
         assert result.map.called("find_scene") == []
-        assert result.mouse.calls[0][0] == "click_target"
+        assert result.img.calls[0][0] == "click_target"
         assert result.statu.temp_point == "picture\\unknown_point.png"
 
     def test_unknown_point_drags_when_previous_map_requested_it(self, run, operations):
@@ -797,18 +815,18 @@ class TestHandleStepDispatch:
             },
         )
         switched = []
-        mouse = MouseRecorder()
+        img = ImgRecorder()
         operations.handle = RecordingHandle()
         operations.calculated = CalculatedRecorder()
         operations.monthly_pass = SimpleNamespace(monthly_pass_check=lambda: None)
         operations.window = SimpleNamespace(
             switch_window=lambda: switched.append(1), get_rect=lambda: (0, 0, 1920, 1080)
         )
-        operations.mouse_event = mouse
+        operations.img = img
 
         operations.process_single_map_handle("map_1-1_0.json", normal_run=False, dev=True)
 
         assert switched == [1]
-        assert mouse.calls[0][0] == "click_target"
+        assert img.calls[0][0] == "click_target"
 
 

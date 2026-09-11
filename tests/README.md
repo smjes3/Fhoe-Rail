@@ -37,8 +37,8 @@ def test_something(make_instance):
 ```
 
 **单例之间互相隔离。** `utils` 大量使用 `SingletonMeta`，`conftest.py` 的 autouse
-夹具会在每个用例前后清空 `SingletonMeta._instances`、`Img._IMG_CACHE`
-和 `MapInfo._maps_cache`，否则上一个用例的配置对象会泄漏到下一个。
+夹具会在每个用例前后清空 `SingletonMeta._instances`、`MapInfo._maps_cache`
+和图片缓存（`vision.images.clear_cache()`），否则上一个用例的配置对象会泄漏到下一个。
 
 **改配置要用 `set_config` 夹具，别直接写 `cfg.config_file[...]`。**
 那改的是内存缓存，而 `ConfigurationManager` 会在文件 mtime 变化时整体重读，
@@ -90,8 +90,9 @@ py -m pytest tests/ -q -rx
 | `test_window.py` | `utils/drivers/window` |
 | `test_mouse_event.py` | `utils/drivers/mouse_event` |
 | `test_keyboard_event.py` | `utils/drivers/keyboard_event` |
-| `test_img.py` | `utils/drivers/img` |
-| `test_pause.py` | `utils/drivers/pause` |
+| `test_img.py` | `utils/vision/img`（Img 门面） |
+| `test_matcher.py` | `utils/vision/matcher` |
+| `test_pause.py` | `utils/ui/pause` |
 | `test_blackscreen.py` | `utils/vision/blackscreen` |
 | `test_get_angle.py` | `utils/vision/get_angle` |
 | `test_mini_asu.py` | `utils/vision/mini_asu` |

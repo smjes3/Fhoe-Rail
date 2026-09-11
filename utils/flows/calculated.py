@@ -10,7 +10,7 @@ from pynput.keyboard import Controller as KeyboardController
 from utils.vision.blackscreen import BlackScreen
 from utils.config.config import ConfigurationManager
 from utils.flows.handle import Handle
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.core.log import log
 from utils.core.thresholds import (
     DREAM_BUILD,
@@ -21,7 +21,7 @@ from utils.core.thresholds import (
 from utils.vision.mini_asu import ASU
 from utils.flows.monthly_pass import MonthlyPass
 from utils.drivers.mouse_event import MouseEvent
-from utils.drivers.pause import Pause
+from utils.ui.pause import Pause
 from utils.drivers.window import Window
 
 

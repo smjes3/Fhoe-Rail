@@ -7,7 +7,7 @@ import pytest
 
 import utils.flows.calculated as calculated_module
 from utils.flows.calculated import Calculated
-from utils.drivers.img import Img
+from utils.vision.img import Img
 
 
 class TestHandleShutdown:

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import utils.vision.mini_asu as mini_asu_module
-from utils.drivers.img import Img
+from utils.vision.img import Img
 from utils.vision.mini_asu import ASU
 
 

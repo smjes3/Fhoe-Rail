@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import pytest
 
-from utils.drivers.img import Img
+from utils.vision.img import Img
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def img_factory(monkeypatch, fake_window_factory):
 
     def _make(image_paths=None, window=None):
         monkeypatch.setattr(
-            "utils.drivers.img.Window",
+            "utils.drivers.screen.Window",
             lambda *args, **kwargs: window or fake_window_factory(),
         )
         return Img(image_paths=image_paths if image_paths is not None else {})
@@ -189,7 +189,9 @@ class TestScanTempScreenshot:
             img.temp_screenshot = (screen, 0, 0, 20, 20)
             return img.temp_screenshot
 
-        img.take_screenshot = fake_take_screenshot
+        # 注意：要替换的是截图源，不是门面 —— scan_temp_screenshot 走
+        # Matcher -> ScreenSource，替换 Img.take_screenshot 会被绕过
+        img.screen.take_screenshot = fake_take_screenshot
         result = img.scan_temp_screenshot(np.full((5, 5, 3), 255, dtype=np.uint8))
 
         assert taken == [1]
@@ -202,7 +204,7 @@ class TestScanTempScreenshot:
         img.temp_screenshot = (screen, 0, 0, 20, 20)
 
         taken = []
-        img.take_screenshot = lambda *a, **k: taken.append(1)
+        img.screen.take_screenshot = lambda *a, **k: taken.append(1)
 
         img.scan_temp_screenshot(np.full((5, 5, 3), 255, dtype=np.uint8))
 
@@ -210,9 +212,11 @@ class TestScanTempScreenshot:
 
 
 class TestHaveScreenshot:
+    """have_screenshot 内部调的是 matcher.scan_screenshot，替换门面会被绕过。"""
+
     def test_true_when_any_image_exceeds_threshold(self, img_factory):
         img = img_factory()
-        img.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
+        img.matcher.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
             "max_val": prepared["val"]
         }
         prepared = [{"val": 0.5}, {"val": 0.99}]
@@ -220,7 +224,7 @@ class TestHaveScreenshot:
 
     def test_false_when_all_below_threshold(self, img_factory):
         img = img_factory()
-        img.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
+        img.matcher.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
             "max_val": prepared["val"]
         }
         assert img.have_screenshot([{"val": 0.1}], threshold=0.9) is False
@@ -243,20 +247,29 @@ class TestRotationHelpers:
 
 
 class TestImgBitwiseCheck:
+    """注意：这几个用例要替换的是**图片加载函数本身**（vision/images.get_img），
+    不是 Img.get_img 这个门面转发 —— Matcher 内部直接调 image_library，
+    替换门面会被绕过。"""
+
+    @staticmethod
+    def stub_image(monkeypatch):
+        save = np.full((5, 5, 3), 100, dtype=np.uint8)
+        monkeypatch.setattr(
+            "utils.vision.images.get_img", lambda path: save.copy()
+        )
+
     def test_returns_true_when_original_matches_better(self, img_factory, monkeypatch):
         img = img_factory()
-        save = np.full((5, 5, 3), 100, dtype=np.uint8)
-        monkeypatch.setattr(Img, "get_img", staticmethod(lambda path: save.copy()))
-        img.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
+        self.stub_image(monkeypatch)
+        img.matcher.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
             "max_val": 0.4 if prepared.mean() > 100 else 0.9
         }
         assert img.img_bitwise_check("./picture/x.png") is True
 
     def test_returns_false_when_inverted_matches_better(self, img_factory, monkeypatch):
         img = img_factory()
-        save = np.full((5, 5, 3), 100, dtype=np.uint8)
-        monkeypatch.setattr(Img, "get_img", staticmethod(lambda path: save.copy()))
-        img.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
+        self.stub_image(monkeypatch)
+        img.matcher.scan_screenshot = lambda prepared, offset=(0, 0, 0, 0): {
             "max_val": 0.9 if prepared.mean() > 100 else 0.4
         }
         assert img.img_bitwise_check("./picture/x.png") is False

@@ -13,7 +13,8 @@ from pynput.keyboard import Key as KeyboardKey
 import utils.flows.handle as handle_module
 from utils.core.exceptions import CustomException
 from utils.flows.handle import Handle
-from utils.drivers.img import Img
+from utils.vision.img import Img
+from utils.vision.matcher import Matcher
 
 
 class TickingTime:
@@ -418,7 +419,11 @@ class TestViewHelpers:
 class TestCalAng:
     def test_identical_arrow_is_zero_degrees(self, make_instance):
         """同一张图旋转 0 度时归一化相关为 1，应判定为 0 度。"""
-        instance = make_instance(Handle, img=object.__new__(Img))
+        # cal_ang 走 Img 门面 -> Matcher.image_rotate，所以这里给一个真的 Matcher
+        instance = make_instance(
+            Handle,
+            img=make_instance(Matcher, screen=None, ui_images={}, _mouse=object()),
+        )
         arrow = np.zeros((25, 25, 3), dtype=np.uint8)
         arrow[8:17, 11:14] = 255
 

@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-from utils.drivers.img import Img
+from utils.vision.img import Img
 
 
 class ASU:
