@@ -1,0 +1,742 @@
+"""utils/flows/map_operations.py —— 地图流程主逻辑中被测得到的部分。"""
+
+import json
+from datetime import datetime
+from types import SimpleNamespace
+
+import pytest
+
+import utils.flows.map_operations as operations_module
+from utils.config.config import ConfigurationManager
+from utils.drivers.img import Img
+from utils.flows.map_operations import MapOperations
+from utils.core.map_statu import MapStatu
+from utils.core.time_utils import TimeUtils
+
+# 分发表会调用的 Handle 方法白名单。故意写成白名单而不是"任何未知属性都返回可调用对象"，
+# 这样 map_operations 里出现拼写错误时会直接 AttributeError，而不是被静默吞掉。
+HANDLE_METHODS = {
+    "handle_space",
+    "handle_caps",
+    "handle_r",
+    "handle_f",
+    "handle_allow_skip_f",
+    "handle_check",
+    "mouse_move",
+    "handle_fighting",
+    "scroll",
+    "handle_shutdown",
+    "handle_e",
+    "handle_esc",
+    "handle_num",
+    "handle_main",
+    "handle_view_set",
+    "handle_view_reset",
+    "handle_view_rotate",
+    "handle_await",
+    "handle_move",
+    "handle_b",
+    "handle_click_floor",
+    "back_to_main",
+}
+
+
+class RecordingHandle:
+    """只记录被调用的方法名与参数。"""
+
+    def __init__(self):
+        self.calls = []
+        self.f_key_error = False
+        self.fight_in_map = False
+        self.fighting_count = 0
+        self.current_fighting_index = 0
+        self.last_step_run = False
+        self.total_fight_time = 0
+
+    def __getattr__(self, name):
+        if name not in HANDLE_METHODS:
+            raise AttributeError(
+                f"map_operations 调用了未在白名单里的 Handle.{name}，请先确认是不是拼写错误"
+            )
+
+        def record(*args, **kwargs):
+            self.calls.append((name, args))
+
+        return record
+
+    def called(self, name):
+        return [call for call in self.calls if call[0] == name]
+
+
+class MapStub:
+    """Map 的替身，记录地图侧动作。"""
+
+    def __init__(self, planet_png_lst=()):
+        self.calls = []
+        self.planet_png_lst = list(planet_png_lst)
+        self.allow_drap_map_switch = False
+        self.allow_scene_drag_switch = False
+        self.allow_retry_in_map_switch = True
+        self.multi_click = 1
+        self.drag_exact = None
+        self.drag_offset = None
+
+    def _record(self, name):
+        def capture(*args, **kwargs):
+            self.calls.append((name, args))
+
+        return capture
+
+    def __getattr__(self, name):
+        # check_* 返回布尔，其余都是记录型动作
+        if name in {"check_allowlist_maps", "check_forbidden_maps"}:
+            return lambda *args, **kwargs: False
+        return self._record(name)
+
+    def called(self, name):
+        return [call for call in self.calls if call[0] == name]
+
+
+
+def write_map(root, version, filename, payload):
+    folder = root / "map" / version
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / filename).write_text(
+        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def set_config_on_disk(root, **values):
+    """map_operations 的部分分支直接 read_json_file，绕过了内存缓存。"""
+    path = root / "config.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data.update(values)
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
+@pytest.fixture
+def operations(make_instance, isolated_cwd, monkeypatch):
+    monkeypatch.setattr(operations_module.time, "sleep", lambda seconds: None)
+    instance = make_instance(
+        MapOperations,
+        cfg=ConfigurationManager(),
+        map_info=SimpleNamespace(
+            map_version="default", map_list=["map_1-1_0.json"]
+        ),
+        time_mgr=TimeUtils(),
+        map_statu=MapStatu(),
+        map=SimpleNamespace(
+            check_allowlist_maps=lambda name: False,
+            check_forbidden_maps=lambda name: False,
+            planet_png_lst=[],
+            open_map=lambda: None,
+            align_angle=lambda: None,
+            reset_round_count=lambda: None,
+            get_map_list=lambda start, start_in_mid: [],
+            allow_map_drag=lambda start: None,
+            allow_scene_drag=lambda start: None,
+            allow_multi_click=lambda start: None,
+            allow_retry_in_map=lambda start: None,
+            allow_drap_map_switch=False,
+            allow_scene_drag_switch=False,
+            allow_retry_in_map_switch=True,
+            multi_click=1,
+        ),
+        handle=SimpleNamespace(f_key_error=False),
+        img=SimpleNamespace(search_img_allow_retry=False),
+        mouse_event=SimpleNamespace(),
+        calculated=SimpleNamespace(),
+        monthly_pass=SimpleNamespace(monthly_pass_check=lambda: None),
+        retry_cnt_max=2,
+        now=datetime.now(),
+    )
+    instance.root = isolated_cwd
+    return instance
+
+
+def basic_map_payload(start, name="1-1 空间站「黑塔」"):
+    return {"name": name, "author": "tester", "start": start, "map": []}
+
+
+class TestShowDevInfo:
+    def test_noop_outside_dev_mode(self, make_instance, monkeypatch):
+        shown = []
+        monkeypatch.setattr(
+            operations_module, "show_text", lambda *args: shown.append(args)
+        )
+        instance = make_instance(MapOperations, window=SimpleNamespace())
+
+        instance.show_dev_info(False, "text", 180, 1045, "map_name")
+
+        assert shown == []
+
+    def test_offsets_text_by_window_origin(
+        self, make_instance, fake_window_factory, monkeypatch
+    ):
+        shown = []
+        monkeypatch.setattr(
+            operations_module, "show_text", lambda *args: shown.append(args)
+        )
+        instance = make_instance(
+            MapOperations, window=fake_window_factory(rect=(100, 200, 2020, 1280))
+        )
+
+        instance.show_dev_info(True, "hello", 180, 1045, "map_name")
+
+        assert shown == [("hello", 280, 1245, "nouid", "map_name")]
+
+
+class TestProcessSingleMapStart:
+    def test_forbidden_map_sets_skip_flag(self, operations):
+        write_map(operations.root, "default", "map_1-1_0.json", basic_map_payload([]))
+        operations.map = SimpleNamespace(
+            check_allowlist_maps=lambda name: False,
+            check_forbidden_maps=lambda name: True,
+            planet_png_lst=[],
+        )
+
+        operations.process_single_map_start(0, "map_1-1_0.json")
+
+        assert operations.map_statu.skip_this_map is True
+
+    def test_allowlist_exclusion_sets_skip_flag(self, operations):
+        write_map(operations.root, "default", "map_1-1_0.json", basic_map_payload([]))
+        operations.map = SimpleNamespace(
+            check_allowlist_maps=lambda name: True,
+            check_forbidden_maps=lambda name: False,
+            planet_png_lst=[],
+        )
+
+        operations.process_single_map_start(0, "map_1-1_0.json")
+
+        assert operations.map_statu.skip_this_map is True
+
+    def test_check_key_skips_map_on_the_wrong_weekday(self, operations):
+        """start 里的 {"check": []} 表示今天不在购买日，应跳过整张图。"""
+        write_map(
+            operations.root,
+            "default",
+            "map_1-1_0.json",
+            basic_map_payload([{"check": []}]),
+        )
+
+        operations.process_single_map_start(0, "map_1-1_0.json")
+
+        assert operations.map_statu.skip_this_map is True
+
+    def test_check_key_continues_on_matching_weekday(self, operations):
+        today = datetime.now().weekday()
+        write_map(
+            operations.root,
+            "default",
+            "map_1-1_0.json",
+            basic_map_payload([{"check": [today]}, {"await": 0.1}]),
+        )
+        awaited = []
+        operations.handle = SimpleNamespace(
+            f_key_error=False, handle_await=lambda value: awaited.append(value)
+        )
+        operations.map = SimpleNamespace(
+            check_allowlist_maps=lambda name: False,
+            check_forbidden_maps=lambda name: False,
+            planet_png_lst=[],
+            allow_map_drag=lambda start: None,
+            allow_scene_drag=lambda start: None,
+            allow_multi_click=lambda start: None,
+            allow_retry_in_map=lambda start: None,
+        )
+
+        operations.process_single_map_start(0, "map_1-1_0.json")
+
+        assert operations.map_statu.skip_this_map is False
+        assert awaited == [0.1]
+
+    def test_need_allow_map_buy_skips_when_disabled(self, operations):
+        write_map(
+            operations.root,
+            "default",
+            "map_1-1_0.json",
+            basic_map_payload([{"need_allow_map_buy": 1}]),
+        )
+        operations.map = SimpleNamespace(
+            check_allowlist_maps=lambda name: False,
+            check_forbidden_maps=lambda name: False,
+            planet_png_lst=[],
+            allow_map_drag=lambda start: None,
+            allow_scene_drag=lambda start: None,
+            allow_multi_click=lambda start: None,
+            allow_retry_in_map=lambda start: None,
+        )
+
+        operations.process_single_map_start(0, "map_1-1_0.json")
+
+        assert operations.map_statu.skip_this_map is True
+
+    def test_f_key_error_is_reset_at_map_start(self, operations):
+        write_map(operations.root, "default", "map_1-1_0.json", basic_map_payload([]))
+        operations.handle = SimpleNamespace(f_key_error=True)
+
+        operations.process_single_map_start(0, "map_1-1_0.json")
+
+        assert operations.handle.f_key_error is False
+
+
+class TestRetryFlagPlumbing:
+    """search_img_allow_retry 的跨模块传递（见 map_operations.py:184/317 与 mouse_event.py:220）。"""
+
+    def test_two_img_instances_do_not_share_state(
+        self, monkeypatch, fake_window_factory
+    ):
+        monkeypatch.setattr(
+            "utils.drivers.img.Window", lambda *args, **kwargs: fake_window_factory()
+        )
+        writer = Img(image_paths={})
+        reader = Img(image_paths={})
+
+        writer.search_img_allow_retry = True
+
+        assert reader.search_img_allow_retry is False, (
+            "Img 不是单例，每个模块各持一个实例"
+        )
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="mouse_event 把重试标志写在自己的 Img 实例上，而 map_operations 读的是"
+        "另一个实例，导致 retry_in_map 的重试分支永远不触发",
+    )
+    def test_flag_written_by_mouse_event_is_visible_to_map_operations(
+        self, monkeypatch, fake_window_factory
+    ):
+        monkeypatch.setattr(
+            "utils.drivers.img.Window", lambda *args, **kwargs: fake_window_factory()
+        )
+        mouse_event_side = Img(image_paths={})
+        map_operations_side = Img(image_paths={})
+
+        mouse_event_side.search_img_allow_retry = True  # mouse_event.py:220
+
+        assert map_operations_side.search_img_allow_retry is True  # map_operations.py:317
+
+
+class TestProcessMap:
+    def test_unknown_start_map_is_reported(self, operations, log_records):
+        operations.map_info = SimpleNamespace(map_version="default", map_list=[])
+
+        operations.process_map("9-9_9")
+
+        assert any("不存在" in r["message"] for r in log_records)
+
+    def test_single_map_runs_only_the_requested_file(self, operations, log_records):
+        processed = []
+        operations.map_info = SimpleNamespace(
+            map_version="default", map_list=["map_1-1_0.json", "map_2-1_0.json"]
+        )
+        operations.map = SimpleNamespace(
+            align_angle=lambda: None,
+            reset_round_count=lambda: None,
+            get_map_list=lambda start, start_in_mid: ["map_1-1_0.json", "map_2-1_0.json"],
+        )
+        operations.handle = SimpleNamespace(total_fight_time=0)
+        operations.process_single_map = lambda index, name, dev: processed.append(name)
+        operations.report = SimpleNamespace(output_report=lambda: None)
+
+        operations.process_map("1-1_0", single_map=True)
+
+        assert processed == ["map_1-1_0.json"]
+
+
+class CalculatedRecorder:
+    """Calculated 的替身，记录加载检测与购买检测的调用。"""
+
+    def __init__(self, allow_buy=True):
+        self.calls = []
+        self.allow_buy = allow_buy
+
+    def run_mapload_check(self, *args, **kwargs):
+        self.calls.append("run_mapload_check")
+
+    def allow_buy_item(self):
+        self.calls.append("allow_buy_item")
+        return self.allow_buy
+
+    def first_role_check(self, *args, **kwargs):
+        self.calls.append("first_role_check")
+
+
+class MouseRecorder:
+    """MouseEvent 的替身，记录点击调用。"""
+
+    def __init__(self, result=True):
+        self.calls = []
+        self.result = result
+
+    def click_target(self, *args, **kwargs):
+        self.calls.append(("click_target", args, kwargs))
+        return self.result
+
+    def click_target_with_alt(self, *args, **kwargs):
+        self.calls.append(("click_target_with_alt", args, kwargs))
+        return self.result
+
+
+class TestStartStepDispatch:
+    """process_single_map_start 里 start 条目的键值分发表。"""
+
+    @pytest.fixture
+    def run(self, operations, monkeypatch):
+        pressed = []
+        monkeypatch.setattr(
+            operations_module.pyautogui, "press", lambda key: pressed.append(key)
+        )
+
+        def _run(entry, planet_png_lst=(), allow_buy=True, click_ok=True):
+            pressed.clear()
+            # start 是一个「单键字典」的列表：每个元素只取第一个键，
+            # 所以多步场景必须传列表，不能把多个键塞进同一个 dict。
+            start = [entry] if isinstance(entry, dict) else list(entry)
+            write_map(
+                operations.root,
+                "default",
+                "map_1-1_0.json",
+                {
+                    "name": "1-1 空间站「黑塔」",
+                    "author": "tester",
+                    "start": start,
+                    "map": [],
+                },
+            )
+            handle = RecordingHandle()
+            game_map = MapStub(planet_png_lst=planet_png_lst)
+            calculated = CalculatedRecorder(allow_buy=allow_buy)
+            mouse = MouseRecorder(result=click_ok)
+            operations.handle = handle
+            operations.map = game_map
+            operations.calculated = calculated
+            operations.mouse_event = mouse
+            operations.img = SimpleNamespace(
+                search_img_allow_retry=False,
+                on_main_interface=lambda **k: False,
+            )
+            operations.process_single_map_start(0, "map_1-1_0.json")
+            return SimpleNamespace(
+                handle=handle,
+                map=game_map,
+                calculated=calculated,
+                mouse=mouse,
+                pressed=list(pressed),
+                statu=operations.map_statu,
+            )
+
+        return _run
+
+    @pytest.mark.parametrize(
+        "entry,method,args",
+        [
+            ({"space": 0.5}, "handle_space", (0.5, "space")),
+            ({"f": 15}, "handle_f", (15,)),
+            ({"w": 1.5}, "handle_move", (1.5, "w")),
+            ({"a": 2.5}, "handle_move", (2.5, "a")),
+            ({"s": 0.4}, "handle_move", (0.4, "s")),
+            ({"d": 3.0}, "handle_move", (3.0, "d")),
+            ({"await": 2}, "handle_await", (2,)),
+            ({"b": 1}, "handle_b", ()),
+            ({"main": 1}, "back_to_main", ()),
+        ],
+    )
+    def test_key_routes_to_handle_method(self, run, entry, method, args):
+        result = run(entry)
+        assert result.handle.called(method)[0][1] == args
+
+    @pytest.mark.parametrize("key", ["esc", "F4"])
+    def test_keys_are_pressed_directly(self, run, key):
+        assert run({key: 1}).pressed == [key]
+
+    def test_map_key_opens_the_map(self, run):
+        assert len(run({"map": 1}).map.called("open_map")) == 1
+
+    def test_blackscreen_key_runs_the_loading_check(self, run):
+        assert run({"blackscreen": 1}).calculated.calls == ["run_mapload_check"]
+
+    def test_normal_run_key_switches_off_sprinting(self, run):
+        assert run({"normal_run": 1}).statu.normal_run is True
+
+    def test_check_key_matching_today_continues(self, run):
+        today = datetime.now().weekday()
+        result = run([{"check": [today]}, {"await": 1}])
+        assert result.statu.skip_this_map is False
+        assert result.handle.called("handle_await")
+
+    def test_check_key_not_matching_today_skips_the_map(self, run):
+        tomorrow = (datetime.now().weekday() + 1) % 7
+        result = run([{"check": [tomorrow]}, {"await": 1}])
+        assert result.statu.skip_this_map is True
+        assert result.handle.called("handle_await") == []
+
+    def test_need_allow_map_buy_skips_when_disabled(self, run):
+        assert run({"need_allow_map_buy": 1}).statu.skip_this_map is True
+
+    def test_need_allow_map_buy_continues_when_enabled(self, run, operations):
+        # 这一支读的是磁盘上的 config.json，不是内存缓存
+        set_config_on_disk(operations.root, allow_map_buy=True)
+        assert run({"need_allow_map_buy": 1}).statu.skip_this_map is False
+
+    def test_need_allow_snack_buy_skips_when_disabled(self, run):
+        assert run({"need_allow_snack_buy": 1}).statu.skip_this_map is True
+
+    def test_need_allow_memory_token_skips_when_disabled(self, run):
+        assert run({"need_allow_memory_token": 1}).statu.skip_this_map is True
+
+    def test_max_picture_buys_item_and_continues(self, run):
+        result = run({"picture\\max.png": 1})
+        assert result.calculated.calls == ["allow_buy_item"]
+        assert result.statu.skip_this_map is False
+        assert result.mouse.calls[0][0] == "click_target"
+
+    def test_max_picture_skips_map_when_cannot_buy(self, run):
+        result = run({"picture\\max.png": 1}, allow_buy=False)
+        assert result.statu.skip_this_map is True
+        assert result.mouse.calls == []
+
+    def test_transfer_picture_runs_loading_check_after_click(self, run):
+        result = run({"picture\\transfer.png": 1})
+        assert result.mouse.calls[0][0] == "click_target"
+        assert result.calculated.calls == ["run_mapload_check"]
+
+    def test_transfer_picture_skips_map_when_click_fails(self, run):
+        result = run({"picture\\transfer.png": 1}, click_ok=False)
+        assert result.statu.skip_this_map is True
+        assert result.calculated.calls == []
+
+    def test_floor_entry_clicks_the_matching_index(self, run):
+        result = run({"floor": [[10, 20, 30], 20]})
+        assert result.handle.called("handle_click_floor")[0][1] == (1,)
+
+    def test_floor_entry_with_unknown_target_is_swallowed(self, run, log_records):
+        run({"floor": [[10, 20], 999]})
+        assert any("floor处理异常" in r["message"] for r in log_records)
+
+    def test_floor_picture_routes_to_map_handler(self, run):
+        assert len(run({"picture\\1floor.png": 1}).map.called("handle_floor")) == 1
+
+    def test_back_picture_routes_to_handle_back(self, run):
+        assert len(run({"picture\\fanhui_1.png": 1}).map.called("handle_back")) == 1
+
+    def test_orientation_picture_routes_to_orientation_handler(self, run):
+        assert len(run({"picture\\orientation_1.png": 1}).map.called("handle_orientation")) == 1
+
+    def test_planet_picture_routes_to_planet_handler(self, run):
+        key = "picture\\orientation_2.png"
+        result = run({key: 1}, planet_png_lst=[key])
+        assert result.map.called("handle_planet")[0][1] == (key,)
+
+    def test_unknown_point_clicks_without_dragging_by_default(self, run):
+        result = run({"picture\\unknown_point.png": 1})
+        assert result.map.called("find_transfer_point") == []
+        assert result.map.called("find_scene") == []
+        assert result.mouse.calls[0][0] == "click_target"
+        assert result.statu.temp_point == "picture\\unknown_point.png"
+
+    def test_unknown_point_drags_when_previous_map_requested_it(self, run, operations):
+        operations.map_statu.next_map_drag = True
+        result = run({"picture\\unknown_point.png": 1})
+        assert len(result.map.called("find_transfer_point")) == 1
+
+    def test_dream_machine_check_failure_is_recorded(self, run):
+        result = run({"picture\\check_4-1_point.png": 1}, click_ok=False)
+        assert result.statu.error_check_point is True
+
+    def test_dream_machine_check_success_is_not_recorded(self, run):
+        result = run({"picture\\check_4-1_point.png": 1}, click_ok=True)
+        assert result.statu.error_check_point is False
+
+    def test_teleport_click_counter_increments(self, run):
+        assert run({"picture\\unknown_point.png": 1}).statu.teleport_click_count == 1
+
+
+class TestHandleStepDispatch:
+    """process_single_map_handle 里 map 条目的键值分发表。"""
+
+    @pytest.fixture
+    def run(self, operations, monkeypatch):
+        monkeypatch.setattr(
+            operations_module,
+            "Pause",
+            lambda dev=False: SimpleNamespace(
+                check_pause=lambda dev, last_point: False
+            ),
+        )
+
+        def _run(entry):
+            write_map(
+                operations.root,
+                "default",
+                "map_1-1_0.json",
+                {
+                    "name": "1-1 空间站「黑塔」",
+                    "author": "tester",
+                    "start": [],
+                    "map": [entry],
+                },
+            )
+            handle = RecordingHandle()
+            operations.handle = handle
+            operations.calculated = CalculatedRecorder()
+            operations.monthly_pass = SimpleNamespace(
+                monthly_pass_check=lambda: None
+            )
+            operations.window = SimpleNamespace(switch_window=lambda: None)
+            operations.process_single_map_handle("map_1-1_0.json", normal_run=False)
+            return SimpleNamespace(handle=handle, statu=operations.map_statu)
+
+        return _run
+
+    @pytest.mark.parametrize(
+        "entry,method,args",
+        [
+            ({"space": 0.5}, "handle_space", (0.5, "space")),
+            ({"caps": 0.5}, "handle_caps", (0.5,)),
+            ({"r": 0.5}, "handle_r", (0.5, "r")),
+            ({"f": 15}, "handle_f", (15,)),
+            ({"allow_skip_f": 15}, "handle_allow_skip_f", (15,)),
+            ({"mouse_move": 30}, "mouse_move", (30,)),
+            ({"fighting": 1}, "handle_fighting", (1,)),
+            ({"scroll": -3}, "scroll", (-3,)),
+            ({"shutdown": 1}, "handle_shutdown", ()),
+            ({"e": 1}, "handle_e", (1,)),
+            ({"esc": 1}, "handle_esc", (1,)),
+            ({"1": 0.5}, "handle_num", (0.5, "1")),
+            ({"main": 1}, "handle_main", (1,)),
+            ({"view_set": 0.1}, "handle_view_set", (0.1,)),
+            ({"view_reset": 0.1}, "handle_view_reset", (0.1,)),
+            ({"view_rotate": 90}, "handle_view_rotate", (90,)),
+            ({"await": 2}, "handle_await", (2,)),
+            ({"w": 1.5}, "handle_move", (1.5, "w", False, "")),
+        ],
+    )
+    def test_key_routes_to_handle_method(self, run, entry, method, args):
+        assert run(entry).handle.called(method)[0][1] == args
+
+    def test_unknown_key_falls_through_to_handle_move(self, run):
+        result = run({"some_unknown_key": 1.2})
+        assert result.handle.called("handle_move")[0][1] == (
+            1.2,
+            "some_unknown_key",
+            False,
+            "",
+        )
+
+    def test_check_key_uses_the_recording_date(self, run, operations):
+        result = run({"check": [0, 1, 2, 3, 4, 5, 6]})
+        name, args = result.handle.called("handle_check")[0]
+        assert args[0] == [0, 1, 2, 3, 4, 5, 6]
+        assert args[1] == operations.now.strftime("%A")
+
+    def test_fighting_count_is_precomputed(self, run):
+        result = run({"fighting": 1})
+        assert result.handle.fighting_count == 1
+
+    def test_multi_entry_map_runs_every_step(self, operations, monkeypatch):
+        monkeypatch.setattr(
+            operations_module,
+            "Pause",
+            lambda dev=False: SimpleNamespace(
+                check_pause=lambda dev, last_point: False
+            ),
+        )
+        write_map(
+            operations.root,
+            "default",
+            "map_1-1_0.json",
+            {
+                "name": "1-1 空间站「黑塔」",
+                "author": "tester",
+                "start": [],
+                "map": [{"w": 1.0}, {"await": 2.0}, {"d": 3.0}],
+            },
+        )
+        handle = RecordingHandle()
+        operations.handle = handle
+        operations.calculated = CalculatedRecorder()
+        operations.monthly_pass = SimpleNamespace(monthly_pass_check=lambda: None)
+
+        operations.process_single_map_handle("map_1-1_0.json", normal_run=False)
+
+        assert [call[0] for call in handle.calls] == [
+            "handle_view_set",  # 进图前先校准视角
+            "handle_move",
+            "handle_await",
+            "handle_move",
+        ]
+
+    def test_f_key_error_breaks_out_and_is_recorded(self, operations, monkeypatch):
+        monkeypatch.setattr(
+            operations_module,
+            "Pause",
+            lambda dev=False: SimpleNamespace(
+                check_pause=lambda dev, last_point: False
+            ),
+        )
+        write_map(
+            operations.root,
+            "default",
+            "map_1-1_0.json",
+            {
+                "name": "1-1 空间站「黑塔」",
+                "author": "tester",
+                "start": [],
+                "map": [{"f": 15}, {"await": 2.0}],
+            },
+        )
+        handle = RecordingHandle()
+
+        def fail_f(value):
+            handle.calls.append(("handle_f", (value,)))
+            handle.f_key_error = True
+
+        handle.handle_f = fail_f
+        operations.handle = handle
+        operations.calculated = CalculatedRecorder()
+        operations.monthly_pass = SimpleNamespace(monthly_pass_check=lambda: None)
+
+        operations.process_single_map_handle("map_1-1_0.json", normal_run=False)
+
+        assert operations.map_statu.map_f_key_error == ["1-1 空间站「黑塔」"]
+        assert not handle.called("handle_await"), "F 键出错后应中断这张地图剩余步骤"
+
+    def test_dev_restart_on_f9_switches_window(self, operations, monkeypatch):
+        # 只在第一次检查时返回 F9：否则 while dev_restart 会永远转下去
+        answers = iter(["F9", False, False, False])
+        monkeypatch.setattr(
+            operations_module,
+            "Pause",
+            lambda dev=False: SimpleNamespace(
+                check_pause=lambda dev, last_point: next(answers, False)
+            ),
+        )
+        write_map(
+            operations.root,
+            "default",
+            "map_1-1_0.json",
+            {
+                "name": "1-1 空间站「黑塔」",
+                "author": "tester",
+                "start": [],
+                "map": [{"await": 1.0}],
+            },
+        )
+        switched = []
+        mouse = MouseRecorder()
+        operations.handle = RecordingHandle()
+        operations.calculated = CalculatedRecorder()
+        operations.monthly_pass = SimpleNamespace(monthly_pass_check=lambda: None)
+        operations.window = SimpleNamespace(
+            switch_window=lambda: switched.append(1), get_rect=lambda: (0, 0, 1920, 1080)
+        )
+        operations.mouse_event = mouse
+
+        operations.process_single_map_handle("map_1-1_0.json", normal_run=False, dev=True)
+
+        assert switched == [1]
+        assert mouse.calls[0][0] == "click_target"
+
+

@@ -179,3 +179,7 @@ pyrightconfig.json
 /config.json
 /.claude/
 test.bat
+
+# 运行日志（utils/log.py 会在 cwd 下创建）
+/logs/
+/tmp/
