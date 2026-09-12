@@ -177,6 +177,9 @@ pyrightconfig.json
 
 # Fhoe-Rail
 /config.json
+
+# 待复核的缺陷清单（复核后决定是否入库）
+/KNOWN_DEFECTS.md
 /.claude/
 test.bat
 
