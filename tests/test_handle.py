@@ -63,8 +63,9 @@ class StubController:
 @pytest.fixture
 def handle(make_instance, monkeypatch):
     """一个不依赖游戏窗口的 Handle。"""
-    controller = StubController()
-    monkeypatch.setattr(handle_module, "KeyboardController", lambda: controller)
+    keyboard = SimpleNamespace(pressed=[], released=[])
+    keyboard.keyboard_press = lambda key, delay=0: keyboard.pressed.append(key)
+    monkeypatch.setattr(handle_module, "KeyboardEvent", keyboard)
     instance = make_instance(
         Handle,
         cfg=SimpleNamespace(config_file={"auto_run_in_map": False}),
@@ -82,8 +83,7 @@ def handle(make_instance, monkeypatch):
         error_fight_cnt=0,
         error_fight_threshold=3,
     )
-    instance.stop_check_sprint_task = lambda: None
-    instance.controller = controller
+    instance.keyboard = keyboard
     return instance
 
 
@@ -330,19 +330,26 @@ class TestHandleR:
 class TestHandleBAndScroll:
     def test_handle_b_presses_b(self, make_instance, monkeypatch):
         pressed = []
-        monkeypatch.setattr(handle_module.pyautogui, "press", lambda key: pressed.append(key))
+        monkeypatch.setattr(
+            handle_module,
+            "KeyboardEvent",
+            SimpleNamespace(keyboard_press=lambda key, delay=0: pressed.append(key)),
+        )
         monkeypatch.setattr(handle_module, "time", TickingTime())
 
         make_instance(Handle).handle_b()
 
         assert pressed == ["b"]
 
-    def test_scroll_delegates_to_pyautogui(self, make_instance, monkeypatch):
+    def test_scroll_delegates_to_the_mouse_driver(self, make_instance, monkeypatch):
+        """滚轮属鼠标设备，经 MouseEvent 转给 drivers。"""
         scrolled = []
-        monkeypatch.setattr(handle_module.pyautogui, "scroll", lambda clicks: scrolled.append(clicks))
         monkeypatch.setattr(handle_module, "time", TickingTime())
+        instance = make_instance(
+            Handle, mouse_event=SimpleNamespace(scroll=lambda clicks: scrolled.append(clicks))
+        )
 
-        make_instance(Handle).scroll(-3)
+        instance.scroll(-3)
 
         assert scrolled == [-3]
 

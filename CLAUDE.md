@@ -6,7 +6,8 @@
 这不是普通的 Python 项目，常规的 TDD / 分层经验需要改造后才成立。
 
 > 现状快照（2026-09）：`utils/` 已按 core / drivers / vision / flows / ui 分层，
-> 独立脚本收在 `tools/`；`handle.py` 已从 1173 行拆到 466 行（三簇全出）；
+> 独立脚本收在 `tools/`；`handle.py` 已从 1173 行拆到 466 行（三簇全出，
+> 且已不直接依赖任何 OS 库）；
 > 129 处 `time.sleep`；44 处宽泛 `except`（含 5 处 `BaseException`）；
 > 15 个模块直接 import `win32*/pyautogui/pynput`；10 个直接 import `cv2`。
 > 分层本身已由 `tests/test_architecture.py` 强制；库耦合仍是棘轮，见 §2.3。
@@ -198,8 +199,7 @@ Fhoe-Rail/
 - ✅ 修 `Img` 单例问题：`Img` 收为单例（7 处 `Img()` 现在共用一个实例），
   重试标志改由 `MouseEvent.last_search_allow_retry` 承载，`retry_in_map`
   重试分支恢复生效
-- ✅ 阈值集中到 `core/thresholds.py`（48 个常量，纯搬运不改数值；
-  **来源仍待实测标定**，见 §1.2）
+- ✅ 阈值集中到 `core/thresholds.py`（48 个常量，数值为实机验证过的当前最佳值）
 - ✅ `tools/shutdown.py` 加 `__main__` 守卫（导入不再阻塞）
 - ✅ 拆 `drivers/img.py`：截图 → `drivers/screen.py`，图片资源 → `vision/images.py`，
   匹配与「找到图就点它」→ `vision/matcher.py`，`Img` 变成组合三者的门面。
@@ -220,14 +220,23 @@ Fhoe-Rail/
   拆的过程中顺手把 `win32api.GetCursorPos` 与 5 处 `pyautogui.press` 也赶进了 drivers，
   所以 `flows/combat.py` **没有**进入 OS 棘轮名单 —— 名单长度前后不变。
 
+- ✅ 清 `flows/handle.py` 的 OS 调用：`pyautogui.press` → `KeyboardEvent.keyboard_press`、
+  `win32api.keybd_event` → `KeyboardEvent.tap_escape`、`pyautogui.scroll` →
+  `MouseEvent.scroll`。**`handle.py` 已出 OS 棘轮名单**（8 → 7 条）。
+
+  注意 `tap_escape` 保留了 `keybd_event` 注入路径而**没有**合并到 pynput —— 同一个
+  文件里 ESC 有两种按法，那个是原作者的明确选择，两种 API 送的 scancode 不同，
+  没有实机验证前不要合并。
+
 接下来：
 
-1. **把剩余的 `win32api` / `pyautogui` 从 `flows/handle.py` 赶出去**（约 10 处，
-   主要在 `handle_esc` 与 `back_to_main`）。做完 `handle.py` 就能出 OS 名单。
+1. **清 `flows/` 里剩下的 cv2 跨层用法**：`calculated.py` / `map.py` /
+   `monthly_pass.py`（VISION 名单剩 4 条，其中 3 条是它们）。
 2. **清 `flows/` 里剩下的 cv2 / pyautogui 跨层用法**：`calculated.py` /
    `map.py` / `monthly_pass.py`。
-3. **给 `core/thresholds.py` 补实测来源**（§1.2 的那张表）。
-   没有它，48 个常量仍然只能靠猜——这是目前最大的单项技术债。
+3. **给 `core/thresholds.py` 逐条补余量标注**（§1.2 的那张表）。
+   48 个常量的**值**已经是对的，但"哪条余量大、哪条一碰就碎"没有写下来。
+   余量小的阈值在游戏更新后最先碎，标出来才知道该先怀疑谁。
 
 **关于棘轮**：名单在 2026-09 改成了只登记**跨层**违规 —— `drivers/` 碰 OS、
 `vision/` 用 cv2 是那两层存在的理由，不算债。改完当场从 12/10 条降到 8/5 条。

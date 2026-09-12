@@ -66,7 +66,6 @@ VISION_LIBS = {"cv2"}
 OS_INPUT_ALLOWLIST = {
     "fhoe.py",
     f"{FLOWS}/calculated.py",
-    f"{FLOWS}/handle.py",
     f"{FLOWS}/map.py",
     f"{FLOWS}/map_operations.py",
     f"{VISION}/get_angle.py",

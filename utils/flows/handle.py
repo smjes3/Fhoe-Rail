@@ -2,10 +2,6 @@ from datetime import datetime
 import random
 import time
 
-import pyautogui
-from pynput.keyboard import Controller as KeyboardController
-import win32api
-import win32con
 
 from utils.config.config import ConfigurationManager
 from utils.core.exceptions import CustomException
@@ -227,7 +223,7 @@ class Handle(metaclass=SingletonMeta):
             if time.time() - start_time > 120:
                 log.error("回到主界面超时（120秒），强制继续执行下一步")
                 break
-            pyautogui.press("esc")
+            KeyboardEvent.keyboard_press("esc")
             time.sleep(delay)
             if self.img.on_interface(
                 check_list=[self.img.battle_esc_check],
@@ -236,7 +232,7 @@ class Handle(metaclass=SingletonMeta):
                 offset=(0, 0, -1800, -970),
                 allow_log=True,
             ):
-                pyautogui.press("esc")
+                KeyboardEvent.keyboard_press("esc")
                 time.sleep(2)
                 self.fight_elapsed()
 
@@ -245,11 +241,7 @@ class Handle(metaclass=SingletonMeta):
         按下esc键，等待3秒后抬起
         """
         if value == 1:
-            win32api.keybd_event(win32con.VK_ESCAPE, 0, 0, 0)
-            try:
-                time.sleep(random.uniform(0.09, 0.15))
-            finally:
-                win32api.keybd_event(win32con.VK_ESCAPE, 0, win32con.KEYEVENTF_KEYUP, 0)
+            KeyboardEvent.tap_escape(random.uniform(0.09, 0.15))
             time.sleep(3)
         else:
             raise CustomException("map数据错误, esc参数只能为1")
@@ -267,7 +259,7 @@ class Handle(metaclass=SingletonMeta):
             time.sleep(0.5)
 
             # 按下ESC打开菜单
-            pyautogui.press("esc")
+            KeyboardEvent.keyboard_press("esc")
             time.sleep(2)
 
             # 通过识图，选择设置
@@ -316,12 +308,7 @@ class Handle(metaclass=SingletonMeta):
         按下数字键，等待value秒后抬起
         """
         time.sleep(value)
-        controller = KeyboardController()
-        try:
-            controller.press(key)
-            time.sleep(0.3)
-        finally:
-            controller.release(key)
+        KeyboardEvent.keyboard_press(key, 0.3)
 
     def handle_main(self, value):
         """
@@ -341,7 +328,7 @@ class Handle(metaclass=SingletonMeta):
         参数：
             :param clicks 滚动单位，正数为向上滚动
         """
-        pyautogui.scroll(clicks)
+        self.mouse_event.scroll(clicks)
         time.sleep(0.5)
 
     # 机器配置不高时，sleep时间过短，会导致误判
@@ -452,7 +439,7 @@ class Handle(metaclass=SingletonMeta):
         """
         按下b键
         """
-        pyautogui.press("b")
+        KeyboardEvent.keyboard_press("b")
         time.sleep(1)
 
     def handle_click_floor(self, floor_idx: int):

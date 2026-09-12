@@ -124,6 +124,10 @@ class MouseEvent(metaclass=SingletonMeta):
             log.info((x, y))
             self.mouse_press_alt(x, y)
 
+    def scroll(self, clicks: float):
+        """滚轮。正数为向上。"""
+        pyautogui.scroll(clicks)
+
     def click_at_cursor(self, clicks=1, delay=0.05):
         """在鼠标当前所在位置点击。
 

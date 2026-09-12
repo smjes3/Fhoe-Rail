@@ -1,5 +1,7 @@
 import time
 
+import win32api
+import win32con
 from pynput.keyboard import Controller as KeyboardController
 from pynput.keyboard import Key as KeyboardKey
 
@@ -33,6 +35,22 @@ class KeyboardEvent:
         转换key，支持特殊键名映射
         """
         return _KEY_MAP.get(key_name, key_name)
+
+    @staticmethod
+    def tap_escape(hold: float):
+        """按一下 ESC（按下 hold 秒后抬起）。
+
+        走 win32api 的 keybd_event，**不是** pynput 的 SendInput 路径。
+        这是原实现的选择（同一个文件里其它键走 pyautogui/pynput），
+        两种注入方式送的 scancode 不同，没有实机验证前不要合并成一条。
+        """
+        win32api.keybd_event(win32con.VK_ESCAPE, 0, 0, 0)
+        try:
+            time.sleep(hold)
+        finally:
+            win32api.keybd_event(
+                win32con.VK_ESCAPE, 0, win32con.KEYEVENTF_KEYUP, 0
+            )
 
     @staticmethod
     def press_key(key_name: str):
