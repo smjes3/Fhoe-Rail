@@ -76,9 +76,6 @@ OS_INPUT_ALLOWLIST = {
 # 理想态：只有 vision/ 直接 import cv2。
 # 同理，vision/ 下的模块 import cv2 是本职，不登记。
 VISION_ALLOWLIST = {
-    f"{FLOWS}/calculated.py",
-    f"{FLOWS}/map.py",
-    f"{FLOWS}/monthly_pass.py",
     f"{UI}/pause.py",
 }
 

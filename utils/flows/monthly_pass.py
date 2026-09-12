@@ -2,8 +2,6 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional
 
-import cv2
-
 from utils.core.log import log
 from utils.core.thresholds import (
     MONTHLY_PASS,

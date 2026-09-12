@@ -85,6 +85,7 @@ class Img(metaclass=SingletonMeta):
     # ------------------------------------------------------------------
 
     match_screenshot = staticmethod(Matcher.match_screenshot)
+    invert = staticmethod(Matcher.invert)
     img_center_point = staticmethod(Matcher.img_center_point)
     handle_rotate_val = staticmethod(Matcher.handle_rotate_val)
 

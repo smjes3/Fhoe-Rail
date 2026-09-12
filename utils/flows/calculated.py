@@ -2,14 +2,13 @@ import os
 import time
 from datetime import datetime
 
-import cv2
-import numpy as np
 import pyautogui
 from pynput.keyboard import Controller as KeyboardController
 
 from utils.vision.blackscreen import BlackScreen
 from utils.config.config import ConfigurationManager
 from utils.flows.handle import Handle
+from utils.vision import colors as color
 from utils.vision.img import Img
 from utils.core.log import log
 from utils.core.thresholds import (
@@ -171,18 +170,6 @@ class Calculated:
         """
         log.info("开始判断1号位")
         image, *_ = self.img.take_screenshot(offset=(1670, 339, -160, -739))
-        image_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-
-        # 定义HSV颜色范围
-        color_ranges = [
-            (np.array([28, 49, 253]), np.array([32, 189, 255])),
-            (np.array([114, 240, 216]), np.array([116, 246, 226])),
-        ]
-
-        # 检查符合条件的像素
-        for lower, upper in color_ranges:
-            pixels = cv2.inRange(image_hsv, lower, upper)
-            if np.any(pixels):
-                pyautogui.press("1")
-                log.info("设置1号位为跑图角色")
-                break
+        if color.any_pixel_in_ranges(image, color.FIRST_ROLE_RANGES):
+            pyautogui.press("1")
+            log.info("设置1号位为跑图角色")

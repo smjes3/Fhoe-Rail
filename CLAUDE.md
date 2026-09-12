@@ -132,6 +132,7 @@ Fhoe-Rail/
 │  │  ├─ matcher.py           #   模板匹配、界面判定、找到图就点它
 │  │  ├─ images.py            #   模板图加载与缓存
 │  │  ├─ arrow.py             #   小地图箭头（HSV 取色 + 360 度匹配）
+│  │  ├─ colors.py            #   色域判定（按 HSV 区间找颜色）
 │  │  ├─ blackscreen.py       #   黑屏判定
 │  │  ├─ get_angle.py         #   箭头朝向
 │  │  └─ mini_asu.py          #   小地图方向
@@ -228,10 +229,16 @@ Fhoe-Rail/
   文件里 ESC 有两种按法，那个是原作者的明确选择，两种 API 送的 scancode 不同，
   没有实机验证前不要合并。
 
+- ✅ 清 `flows/` 里剩下的 cv2 跨层用法：`map.py` 的取反色 → `Img.invert`、
+  `calculated.py` 的 HSV 色域判定 → `vision/colors.py`、`monthly_pass.py`
+  的 `import cv2` 是死导入直接删。**VISION 名单 4 → 1 条**（只剩 `ui/pause.py`
+  的 `cv2.imshow`，那是它显示调试图片用的）。
+
 接下来：
 
-1. **清 `flows/` 里剩下的 cv2 跨层用法**：`calculated.py` / `map.py` /
-   `monthly_pass.py`（VISION 名单剩 4 条，其中 3 条是它们）。
+1. **`ui/pause.py` 的 cv2 收口**（显示调试图片）—— 最后一个 cv2 跨层点。
+2. **清 `flows/` 剩余的直接 OS 调用**：`map.py` / `calculated.py` /
+  `map_operations.py` 还在用 `pyautogui`。
 2. **清 `flows/` 里剩下的 cv2 / pyautogui 跨层用法**：`calculated.py` /
    `map.py` / `monthly_pass.py`。
 3. **给 `core/thresholds.py` 逐条补余量标注**（§1.2 的那张表）。

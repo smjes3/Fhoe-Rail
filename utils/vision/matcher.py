@@ -63,6 +63,11 @@ class Matcher:
         }
 
     @staticmethod
+    def invert(image):
+        """颜色反转（取反色）。用于「阴阳变转」那类原图/反色谁更像的判定。"""
+        return cv2.bitwise_not(image)
+
+    @staticmethod
     def img_center_point(result, shape) -> tuple:
         """计算匹配到的图片中心位置。"""
         mat_top, mat_left = result["max_loc"]

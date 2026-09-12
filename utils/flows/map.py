@@ -1,6 +1,5 @@
 import time
 
-import cv2 as cv
 import pyautogui
 
 from utils.vision.blackscreen import BlackScreen
@@ -187,7 +186,7 @@ class Map:
         """
         start_time = time.time()
         target = Img.get_img(key)
-        inverted_target = cv.bitwise_not(target)
+        inverted_target = Img.invert(target)
         target_list = [target, inverted_target]
         direction_names = ["向下移动", "向上移动"]
         while (
