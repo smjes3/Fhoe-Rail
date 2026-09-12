@@ -162,21 +162,16 @@ class TestCheckPlanet:
 
 class TestResetRoundCount:
     def test_zeroes_per_round_handle_counters(self, game_map):
+        reset_calls = []
         game_map.handle = SimpleNamespace(
-            total_fight_time=99,
             tatol_save_time=99,
-            total_fight_cnt=9,
-            total_no_fight_cnt=9,
-            auto_final_fight_e_cnt=9,
+            combat=SimpleNamespace(reset=lambda: reset_calls.append(1)),
         )
 
         game_map.reset_round_count()
 
-        assert game_map.handle.total_fight_time == 0
+        assert reset_calls == [1], "战斗计数由 combat 自己重置"
         assert game_map.handle.tatol_save_time == 0
-        assert game_map.handle.total_fight_cnt == 0
-        assert game_map.handle.total_no_fight_cnt == 0
-        assert game_map.handle.auto_final_fight_e_cnt == 0
 
 
 class TestDragSequences:

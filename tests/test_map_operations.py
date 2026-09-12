@@ -41,7 +41,6 @@ HANDLE_METHODS = {
     "handle_b",
     "handle_click_floor",
     "back_to_main",
-    "fight_elapsed",
 }
 
 
@@ -52,10 +51,9 @@ class RecordingHandle:
         self.calls = []
         self.f_key_error = False
         self.fight_in_map = False
-        self.fighting_count = 0
-        self.current_fighting_index = 0
         self.last_step_run = False
-        self.total_fight_time = 0
+        # 战斗计数归 handle.combat 持有（见 flows/combat.py）
+        self.combat = SimpleNamespace(fighting_count=0, current_fighting_index=0)
 
     def __getattr__(self, name):
         if name not in HANDLE_METHODS:
@@ -174,22 +172,28 @@ class TestDispatchContract:
     """
 
     @staticmethod
-    def dispatched_names():
-        """map_operations 里真正会执行的 `self.handle.X(...)` 调用名。"""
+    def _self_attr_chain(func):
+        """把 `a.b.c(...)` 拆成 ("a", "b", "c")，不是这种形状就返回 None。"""
+        parts = []
+        node = func
+        while isinstance(node, ast.Attribute):
+            parts.append(node.attr)
+            node = node.value
+        if isinstance(node, ast.Name) and node.id == "self":
+            return tuple(reversed(parts))
+        return None
+
+    @classmethod
+    def dispatched_names(cls, prefix=("handle",)):
+        """map_operations 里真正会执行的 `self.<prefix>.X(...)` 调用名。"""
         source = Path(operations_module.__file__).read_text(encoding="utf-8")
         names = set()
         for node in ast.walk(ast.parse(source)):
             if not isinstance(node, ast.Call):
                 continue
-            func = node.func
-            if (
-                isinstance(func, ast.Attribute)
-                and isinstance(func.value, ast.Attribute)
-                and func.value.attr == "handle"
-                and isinstance(func.value.value, ast.Name)
-                and func.value.value.id == "self"
-            ):
-                names.add(func.attr)
+            chain = cls._self_attr_chain(node.func)
+            if chain and chain[:-1] == prefix:
+                names.add(chain[-1])
         return names
 
     def test_whitelist_matches_what_dispatch_actually_calls(self):
@@ -201,6 +205,15 @@ class TestDispatchContract:
         assert HANDLE_METHODS <= called | {"handle_shutdown", "mouse_move"}, (
             f"白名单里有分发表从不调用的名字：{sorted(HANDLE_METHODS - called)}"
         )
+
+    def test_dispatched_combat_methods_exist(self):
+        """`self.handle.combat.X(...)` 也要真实存在。"""
+        from utils.flows.combat import Combat
+
+        missing = sorted(
+            n for n in self.dispatched_names(("handle", "combat")) if not hasattr(Combat, n)
+        )
+        assert missing == [], f"分发表调用了不存在的 Combat 方法：{missing}"
 
     @pytest.mark.xfail(
         strict=True,
@@ -467,7 +480,9 @@ class TestProcessMap:
             reset_round_count=lambda: None,
             get_map_list=lambda start, start_in_mid: ["map_1-1_0.json", "map_2-1_0.json"],
         )
-        operations.handle = SimpleNamespace(total_fight_time=0)
+        operations.handle = SimpleNamespace(
+            combat=SimpleNamespace(total_fight_time=0)
+        )
         operations.process_single_map = lambda index, name, dev: processed.append(name)
         operations.report = SimpleNamespace(output_report=lambda: None)
 
@@ -780,7 +795,7 @@ class TestHandleStepDispatch:
 
     def test_fighting_count_is_precomputed(self, run):
         result = run({"fighting": 1})
-        assert result.handle.fighting_count == 1
+        assert result.handle.combat.fighting_count == 1
 
     def test_multi_entry_map_runs_every_step(self, operations, monkeypatch):
         monkeypatch.setattr(

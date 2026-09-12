@@ -41,17 +41,17 @@ class Report:
             f"开始地图：{self.map_statu.start_map_name}，结束地图：{self.map_statu.end_map_name}")
 
         # 战斗次数信息
-        log.info(f"战斗次数：{self.handle.total_fight_cnt}")
-        log.info(f"未战斗次数：{self.handle.total_no_fight_cnt}")
+        log.info(f"战斗次数：{self.handle.combat.total_fight_cnt}")
+        log.info(f"未战斗次数：{self.handle.combat.total_no_fight_cnt}")
         log.info("未战斗次数在非黄泉地图首次锄地参考值：70-80，不作为漏怪标准，漏怪具体请在背包中对材料进行溯源查找")
 
         # 奇巧零食使用次数
-        log.info(f"奇巧零食使用次数：{self.handle.snack_used}")
+        log.info(f"奇巧零食使用次数：{self.handle.combat.snack_used}")
 
         # 异常相关信息
         # 异常战斗信息
         log.info(
-            f"异常战斗识别（战斗时间 < {self.handle.error_fight_threshold} 秒）次数：{self.handle.error_fight_cnt}")
+            f"异常战斗识别（战斗时间 < {self.handle.combat.error_fight_threshold} 秒）次数：{self.handle.combat.error_fight_cnt}")
 
         # 筑梦机关检查
         if hasattr(self.map_statu, 'error_check_point') and self.map_statu.error_check_point:

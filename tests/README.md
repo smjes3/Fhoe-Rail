@@ -96,7 +96,7 @@ py -m pytest tests/ -q -rx
 | `test_blackscreen.py` | `utils/vision/blackscreen` |
 | `test_get_angle.py` | `utils/vision/get_angle` |
 | `test_mini_asu.py` | `utils/vision/mini_asu` |
-| `test_handle.py` | `utils/flows/handle` |
+| `test_handle.py` | `utils/flows/handle`（含战斗簇，见 `utils/flows/combat`） |
 | `test_calculated.py` | `utils/flows/calculated` |
 | `test_monthly_pass.py` | `utils/flows/monthly_pass` |
 | `test_map.py` | `utils/flows/map` + `utils/core/map_move` |

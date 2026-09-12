@@ -112,7 +112,7 @@ class MapOperations:
 
             # 计算总时间与总战斗时间
             self.map_statu.total_time = time.time() - total_start_time
-            self.map_statu.total_fight_time = self.handle.total_fight_time
+            self.map_statu.total_fight_time = self.handle.combat.total_fight_time
 
             # 输出报告
             self.report.output_report()
@@ -349,9 +349,9 @@ class MapOperations:
             f"map/{self.map_info.map_version}/{map_base}.json")
         map_data_name = map_data['name']
         map_filename = map_base
-        self.handle.fighting_count = sum(
+        self.handle.combat.fighting_count = sum(
             1 for map in map_data["map"] if "fighting" in map and map["fighting"] == 1)
-        self.handle.current_fighting_index = 0
+        self.handle.combat.current_fighting_index = 0
         total_map_count = len(map_data['map'])
 
         # 1号位相关检测
@@ -469,7 +469,7 @@ class MapOperations:
 
             if self.map_info.map_version == "HuangQuan" and last_key == "e":
                 if not self.img.on_main_interface(timeout=0.2):
-                    fight_status = self.handle.fight_elapsed()
+                    fight_status = self.handle.combat.fight_elapsed()
                     if not fight_status:
                         log.info('未进入战斗')
 

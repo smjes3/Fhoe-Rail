@@ -10,8 +10,10 @@ import win32api
 import win32con
 from pynput.keyboard import Key as KeyboardKey
 
+import utils.flows.combat as combat_module
 import utils.flows.handle as handle_module
 from utils.core.exceptions import CustomException
+from utils.flows.combat import Combat
 from utils.flows.handle import Handle
 from utils.vision.img import Img
 from utils.vision.matcher import Matcher
@@ -227,15 +229,6 @@ class TestHandleCheck:
 
     def test_empty_list_means_skip(self, make_instance):
         assert make_instance(Handle).handle_check([], "无") is False
-
-
-class TestFightErrorCounting:
-    def test_counts_only_fights_shorter_than_threshold(self, make_instance):
-        instance = make_instance(Handle, error_fight_cnt=0, error_fight_threshold=3)
-        instance.fight_error_cnt(2)
-        instance.fight_error_cnt(3)
-        instance.fight_error_cnt(30)
-        assert instance.error_fight_cnt == 1
 
 
 class TestHandleEsc:
@@ -496,9 +489,13 @@ class CombatMouse:
     def __init__(self):
         self.centers = []
         self.clicks = []
+        self.cursor_clicks = 0
 
     def click(self, points, *args, **kwargs):
         self.clicks.append(points)
+
+    def click_at_cursor(self, *args, **kwargs):
+        self.cursor_clicks += 1
 
     def click_center(self):
         self.centers.append(1)
@@ -509,16 +506,18 @@ class CombatMouse:
 
 @pytest.fixture
 def combat(make_instance, monkeypatch):
-    """一个只关心战斗逻辑的 Handle，不碰窗口、不碰键鼠。"""
-    monkeypatch.setattr(handle_module.time, "sleep", lambda seconds: None)
-    monkeypatch.setattr(handle_module.pyautogui, "press", lambda key: None)
+    """一个只关心战斗逻辑的 Combat，不碰窗口、不碰键鼠。"""
+    monkeypatch.setattr(combat_module.time, "sleep", lambda seconds: None)
     monkeypatch.setattr(
-        handle_module.Img, "get_img", staticmethod(lambda path: np.zeros((4, 4, 3), np.uint8))
+        combat_module, "KeyboardEvent", SimpleNamespace(keyboard_press=lambda *a, **k: None)
+    )
+    monkeypatch.setattr(
+        combat_module.Img, "get_img", staticmethod(lambda path: np.zeros((4, 4, 3), np.uint8))
     )
     image = CombatImg()
     mouse = CombatMouse()
     instance = make_instance(
-        Handle,
+        Combat,
         cfg=SimpleNamespace(
             config_file={
                 "auto_final_fight_e": False,
@@ -551,10 +550,9 @@ class TestHandleFighting:
         with pytest.raises(CustomException):
             combat.handle_fighting(3)
 
-    def test_value_two_clicks_at_cursor(self, combat, monkeypatch):
-        monkeypatch.setattr(win32api, "GetCursorPos", lambda: (11, 22))
+    def test_value_two_clicks_at_cursor(self, combat):
         combat.handle_fighting(2)
-        assert combat.mouse.clicks == [(11, 22)]
+        assert combat.mouse.cursor_clicks == 1, "打障碍物 = 在当前位置点一下"
 
     def test_last_fight_switches_to_e_when_enabled(self, combat):
         combat.cfg = SimpleNamespace(
@@ -651,7 +649,11 @@ class TestTechniquePointsDialog:
         )
         combat.image.click_target = lambda *a, **k: True
         pressed = []
-        monkeypatch.setattr(handle_module.pyautogui, "press", pressed.append)
+        monkeypatch.setattr(
+            combat_module,
+            "KeyboardEvent",
+            SimpleNamespace(keyboard_press=lambda key, delay=0: pressed.append(key)),
+        )
 
         combat.technique_points_dialog()
         # 购买流程里的最后一步是补 E

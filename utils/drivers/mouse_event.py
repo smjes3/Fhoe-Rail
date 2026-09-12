@@ -124,6 +124,14 @@ class MouseEvent(metaclass=SingletonMeta):
             log.info((x, y))
             self.mouse_press_alt(x, y)
 
+    def click_at_cursor(self, clicks=1, delay=0.05):
+        """在鼠标当前所在位置点击。
+
+        调用方不该自己去拿光标坐标（那是 Win32 的细节），所以把
+        GetCursorPos 收在这一层。
+        """
+        self.click(win32api.GetCursorPos(), clicks=clicks, delay=delay)
+
     def click_center(self):
         """
         点击游戏窗口中心位置

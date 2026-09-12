@@ -6,7 +6,7 @@
 这不是普通的 Python 项目，常规的 TDD / 分层经验需要改造后才成立。
 
 > 现状快照（2026-09）：`utils/` 已按 core / drivers / vision / flows / ui 分层，
-> 独立脚本收在 `tools/`；仍有 `handle.py` 1150 行 / 44 个方法；
+> 独立脚本收在 `tools/`；`handle.py` 已从 1173 行拆到 857 行（战斗簇先出）；
 > 129 处 `time.sleep`；44 处宽泛 `except`（含 5 处 `BaseException`）；
 > 15 个模块直接 import `win32*/pyautogui/pynput`；10 个直接 import `cv2`。
 > 分层本身已由 `tests/test_architecture.py` 强制；库耦合仍是棘轮，见 §2.3。
@@ -134,7 +134,8 @@ Fhoe-Rail/
 │  │  ├─ get_angle.py         #   箭头朝向
 │  │  └─ mini_asu.py          #   小地图方向
 │  ├─ flows/                  # 【编排层】
-│  │  ├─ handle.py            #   ⚠️ 1150 行 44 方法，待拆（见 2.4）
+│  │  ├─ handle.py            #   动作分发门面（857 行，仍在拆）
+│  │  ├─ combat.py            #   战斗判定与结算（已从 handle 拆出）
 │  │  ├─ map_operations.py    #   跑图主流程
 │  │  ├─ map.py               #   地图拖动 / 传送点查找
 │  │  ├─ calculated.py        #   加载检测 / 购买 / 1 号位
@@ -201,13 +202,19 @@ Fhoe-Rail/
   匹配与「找到图就点它」→ `vision/matcher.py`，`Img` 变成组合三者的门面。
   `MouseEvent` 相应退回纯输入层，`drivers/pause.py` 移到 `ui/`。
 
+- ✅ 拆 `Handle` 第一簇：战斗 → `flows/combat.py`（10 个方法 + 战斗计数）。
+  `Handle` 保留装配与 `handle_fighting` / `handle_e` 两个委派入口；
+  计数改由 `handle.combat.X` 访问（map / map_operations / report 共 5 处）。
+  拆的过程中顺手把 `win32api.GetCursorPos` 与 5 处 `pyautogui.press` 也赶进了 drivers，
+  所以 `flows/combat.py` **没有**进入 OS 棘轮名单 —— 名单长度前后不变。
+
 接下来：
 
-1. **把 `win32api` 从 `flows/handle.py` 赶出去**，改调 `drivers`。
-   这是后续所有测试的地基。→ 2–3 天
-2. **拆 `Handle`**（1150 行 / 44 方法）成 `flows/combat.py` + `flows/orientation.py`。
-   → 3–5 天，风险最高，放最后
-3. **给 `core/thresholds.py` 补实测来源**（CLAUDE.md §1.2 的那张表）。
+1. **继续拆 `Handle`**：`flows/orientation.py`（视角校准：`set_angle` / `cal_ang` /
+   `handle_view_*` / `take_arrow`，状态自足）与 `flows/movement.py`
+   （`handle_move` + 疾跑线程，要先理清它与战斗的交叉分支）。
+2. **把剩余的 `win32api` / `pyautogui` 从 `flows/handle.py` 赶出去**（约 10 处）。
+3. **给 `core/thresholds.py` 补实测来源**（§1.2 的那张表）。
    没有它，48 个常量仍然只能靠猜——这是目前最大的单项技术债。
 
 **关于棘轮**：拆 `img.py` 并没有像原计划那样让 `OS_INPUT_ALLOWLIST` /
