@@ -133,6 +133,7 @@ Fhoe-Rail/
 │  │  ├─ images.py            #   模板图加载与缓存
 │  │  ├─ arrow.py             #   小地图箭头（HSV 取色 + 360 度匹配）
 │  │  ├─ colors.py            #   色域判定（按 HSV 区间找颜色）
+│  │  ├─ viewer.py            #   调试图片窗口（cv2 显示接口）
 │  │  ├─ blackscreen.py       #   黑屏判定
 │  │  ├─ get_angle.py         #   箭头朝向
 │  │  └─ mini_asu.py          #   小地图方向
@@ -186,7 +187,7 @@ Fhoe-Rail/
 | `core/` 不 import `cv2 / win32* / pyautogui / pynput` | ✅ **已强制** | `::TestCoreIsPure` |
 | 各层 `__init__.py` 保持为空 | ✅ **已强制** | `::TestLayerDirection` |
 | 只有 `drivers/` import `win32* / pyautogui / pynput` | ⏳ 棘轮 | `::TestOsCouplingRatchet` |
-| 只有 `vision/` import `cv2` | ⏳ 棘轮 | `::TestVisionCouplingRatchet` |
+| 只有 `vision/` import `cv2` | ✅ **已强制** | `::TestVisionIsolation` |
 | 禁止 import 时产生副作用 | ⏳ 棘轮 | `::TestImportTimeSideEffects` |
 | 禁止星号导入 | ⏳ 棘轮 | `::TestStarImports` |
 
@@ -231,14 +232,17 @@ Fhoe-Rail/
 
 - ✅ 清 `flows/` 里剩下的 cv2 跨层用法：`map.py` 的取反色 → `Img.invert`、
   `calculated.py` 的 HSV 色域判定 → `vision/colors.py`、`monthly_pass.py`
-  的 `import cv2` 是死导入直接删。**VISION 名单 4 → 1 条**（只剩 `ui/pause.py`
-  的 `cv2.imshow`，那是它显示调试图片用的）。
+  的 `import cv2` 是死导入直接删。
+- ✅ `ui/pause.py` 的调试图片显示 → `vision/viewer.py`。
+
+  **VISION 名单已清空（10 → 0）**，于是这条从棘轮升级成硬规则
+  （`TestVisionIsolation`，没有豁免名单）。至此 `flows/` 与 `ui/` 下不再出现 cv2。
 
 接下来：
 
-1. **`ui/pause.py` 的 cv2 收口**（显示调试图片）—— 最后一个 cv2 跨层点。
-2. **清 `flows/` 剩余的直接 OS 调用**：`map.py` / `calculated.py` /
-  `map_operations.py` 还在用 `pyautogui`。
+1. **清 `flows/` 剩余的直接 OS 调用**：`map.py` / `calculated.py` /
+   `map_operations.py` 还在用 `pyautogui`（主要是 `press("esc")` 一类）。
+   做完 OS 名单只剩监听/热键那几条（`get_angle` / `pause` / `record` / `fhoe`）。
 2. **清 `flows/` 里剩下的 cv2 / pyautogui 跨层用法**：`calculated.py` /
    `map.py` / `monthly_pass.py`。
 3. **给 `core/thresholds.py` 逐条补余量标注**（§1.2 的那张表）。

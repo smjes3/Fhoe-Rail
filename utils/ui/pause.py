@@ -2,10 +2,10 @@ import threading
 from typing import Union
 
 import keyboard
-import cv2
 
 from utils.vision.img import Img
 from utils.core.log import log
+from utils.vision import viewer
 
 # 模块级保存已注册的键盘监听器，避免每张地图 new Pause() 时重复注册导致监听器泄漏
 _INSTALLED_HANDLERS = []
@@ -74,9 +74,9 @@ class Pause:
         log.info(f"展示图片：{img}")
         image = Img.get_img(img)
         if image is not None:
-            cv2.imshow("temp_point", image)
+            viewer.show(image)
             while self.pause_event.is_set():
-                cv2.waitKey(1)
+                viewer.pump()
 
     def check_pause(self, dev: bool, last_point: str) -> Union[str, bool]:
         """检查是否暂停，暂停情况下返回取消暂停使用的按键
@@ -97,7 +97,7 @@ class Pause:
                 show = True
                 self._show_img(last_point)
         if press:
-            cv2.destroyAllWindows()
+            viewer.close_all()
             return self.last_key_pressed
         else:
             return False

@@ -73,12 +73,6 @@ OS_INPUT_ALLOWLIST = {
     f"{UI}/record.py",
 }
 
-# 理想态：只有 vision/ 直接 import cv2。
-# 同理，vision/ 下的模块 import cv2 是本职，不登记。
-VISION_ALLOWLIST = {
-    f"{UI}/pause.py",
-}
-
 # 理想态：只剩 core/log.py（日志初始化必须最早执行）。
 SIDE_EFFECT_ALLOWLIST = {
     "fhoe.py",
@@ -251,32 +245,25 @@ class TestOsCouplingRatchet:
         assert stale == [], f"这些文件已不再直接依赖 OS 输入库，请从名单中移除：{stale}"
 
 
-class TestVisionCouplingRatchet:
-    """棘轮：理想态是只有 vision/ 直接 import cv2。"""
+class TestVisionIsolation:
+    """cv2 只允许出现在 vision/ —— 这条已经从棘轮升级成硬规则。
 
-    def test_no_new_module_imports_cv2(self):
+    2026-09：所有跨层的 cv2 调用都收口完毕，名单清空后就不再需要豁免机制。
+    识别是最容易被游戏更新打碎的一层，让它的依赖面收在一处，才能单独回归。
+    """
+
+    def test_only_vision_imports_cv2(self):
         offenders = sorted(
             path
             for path, source in source_files()
             if imported_top_level_modules(source) & VISION_LIBS
             and layer_of(path) != VISION
-            and path not in VISION_ALLOWLIST
         )
         assert offenders == [], (
-            "这些模块新增了对 cv2 的直接依赖。\n"
-            "请把匹配逻辑放进 vision/，业务代码只消费「匹配结果对象」。\n"
+            "这些模块在 vision/ 之外直接 import cv2。\n"
+            "图像处理请放进 vision/，业务代码只消费「匹配结果对象」。\n"
             f"违规文件：{offenders}"
         )
-
-    def test_allowlist_has_no_stale_entries(self):
-        violating = {
-            path
-            for path, source in source_files()
-            if imported_top_level_modules(source) & VISION_LIBS
-            and layer_of(path) != VISION
-        }
-        stale = sorted(VISION_ALLOWLIST - violating)
-        assert stale == [], f"这些文件已不再依赖 cv2，请从名单中移除：{stale}"
 
 
 class TestImportTimeSideEffects:

@@ -31,24 +31,27 @@ class StubKeyboard:
 def keyboard(monkeypatch):
     stub = StubKeyboard()
     monkeypatch.setattr(pause_module, "keyboard", stub)
-    monkeypatch.setattr(pause_module, "cv2", SimpleCv2())
+    monkeypatch.setattr(pause_module, "viewer", SimpleViewer())
     _INSTALLED_HANDLERS.clear()
     yield stub
     _INSTALLED_HANDLERS.clear()
 
 
-class SimpleCv2:
+class SimpleViewer:
+    """utils/vision/viewer 的替身。"""
+
     def __init__(self):
         self.destroyed = 0
+        self.shown = []
 
-    def destroyAllWindows(self):
+    def show(self, image):
+        self.shown.append(image)
+
+    def pump(self):
+        return None
+
+    def close_all(self):
         self.destroyed += 1
-
-    def imshow(self, *args, **kwargs):
-        return None
-
-    def waitKey(self, delay):
-        return None
 
 
 class TestHandlerRegistration:
@@ -158,7 +161,7 @@ class TestCheckPause:
         finally:
             resume.join()
 
-        assert pause_module.cv2.destroyed == 1
+        assert pause_module.viewer.destroyed == 1
 
     @pytest.mark.xfail(
         strict=True,
