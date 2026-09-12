@@ -1,7 +1,9 @@
 """utils/flows/map_operations.py —— 地图流程主逻辑中被测得到的部分。"""
 
+import ast
 import json
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -34,10 +36,12 @@ HANDLE_METHODS = {
     "handle_view_reset",
     "handle_view_rotate",
     "handle_await",
+    "auto_use_technique_consumable",
     "handle_move",
     "handle_b",
     "handle_click_floor",
     "back_to_main",
+    "fight_elapsed",
 }
 
 
@@ -156,6 +160,59 @@ def operations(make_instance, isolated_cwd, monkeypatch):
 
 def basic_map_payload(start, name="1-1 空间站「黑塔」"):
     return {"name": name, "author": "tester", "start": start, "map": []}
+
+
+class TestDispatchContract:
+    """分发表调用的 Handle 方法必须真的存在。
+
+    这里踩过一次：`HANDLE_METHODS` 白名单是从分发表反向推导出来的，
+    于是它**记录**了 `mouse_move` / `handle_shutdown` 两个名字，却没有检查
+    `Handle` 是否提供它们 —— 名字是照着调用点抄的，调用点什么它就抄什么。
+    白名单只能保证「替身愿意响应」，不能保证「真身确实有」。
+
+    这条测试补上真身那一半。用 AST 而不是正则提取，避免把注释掉的调用算进来。
+    """
+
+    @staticmethod
+    def dispatched_names():
+        """map_operations 里真正会执行的 `self.handle.X(...)` 调用名。"""
+        source = Path(operations_module.__file__).read_text(encoding="utf-8")
+        names = set()
+        for node in ast.walk(ast.parse(source)):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and isinstance(func.value, ast.Attribute)
+                and func.value.attr == "handle"
+                and isinstance(func.value.value, ast.Name)
+                and func.value.value.id == "self"
+            ):
+                names.add(func.attr)
+        return names
+
+    def test_whitelist_matches_what_dispatch_actually_calls(self):
+        """白名单与分发表不能各说各话。"""
+        called = self.dispatched_names()
+        assert called <= HANDLE_METHODS, (
+            f"分发表调用了白名单外的 Handle 方法：{sorted(called - HANDLE_METHODS)}"
+        )
+        assert HANDLE_METHODS <= called | {"handle_shutdown", "mouse_move"}, (
+            f"白名单里有分发表从不调用的名字：{sorted(HANDLE_METHODS - called)}"
+        )
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="分发表调用了 Handle 上不存在的方法：mouse_move / handle_shutdown。"
+        "mouse_move 是 record.py 录制视角移动时会写出的步骤（见其 save_json），"
+        "handle_shutdown 则在 README 里被列为合法步骤 —— 两者都会 AttributeError",
+    )
+    def test_every_dispatched_handle_method_exists(self):
+        from utils.flows.handle import Handle
+
+        missing = sorted(n for n in self.dispatched_names() if not hasattr(Handle, n))
+        assert missing == [], f"分发表调用了不存在的 Handle 方法：{missing}"
 
 
 class TestShowDevInfo:

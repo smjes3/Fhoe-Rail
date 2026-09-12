@@ -229,80 +229,6 @@ class TestHandleCheck:
         assert make_instance(Handle).handle_check([], "无") is False
 
 
-class TestHandleFighting:
-    def test_rejects_unknown_value(self, make_instance):
-        with pytest.raises(CustomException):
-            make_instance(Handle).handle_fighting(3)
-
-    def test_value_two_clicks_cursor(self, make_instance, monkeypatch):
-        monkeypatch.setattr(win32api, "GetCursorPos", lambda: (11, 22))
-        monkeypatch.setattr(handle_module, "time", TickingTime())
-        clicked = []
-        instance = make_instance(
-            Handle, mouse_event=SimpleNamespace(click=lambda points: clicked.append(points))
-        )
-
-        instance.handle_fighting(2)
-
-        assert clicked == [(11, 22)]
-
-    def test_last_fight_uses_e_when_enabled(self, make_instance):
-        instance = make_instance(
-            Handle,
-            cfg=SimpleNamespace(
-                config_file={"auto_final_fight_e": True, "auto_final_fight_e_cnt": 3}
-            ),
-            current_fighting_index=0,
-            fighting_count=1,
-            auto_final_fight_e_cnt=0,
-        )
-        actions = []
-        instance.handle_e = lambda value: actions.append("e")
-        instance.fighting = lambda: actions.append("fight")
-
-        instance.handle_fighting(1)
-
-        assert actions == ["e"]
-        assert instance.current_fighting_index == 1
-        assert instance.auto_final_fight_e_cnt == 1
-
-    def test_non_last_fight_uses_normal_attack(self, make_instance):
-        instance = make_instance(
-            Handle,
-            cfg=SimpleNamespace(
-                config_file={"auto_final_fight_e": True, "auto_final_fight_e_cnt": 3}
-            ),
-            current_fighting_index=0,
-            fighting_count=2,
-            auto_final_fight_e_cnt=0,
-        )
-        actions = []
-        instance.handle_e = lambda value: actions.append("e")
-        instance.fighting = lambda: actions.append("fight")
-
-        instance.handle_fighting(1)
-
-        assert actions == ["fight"]
-
-    def test_e_budget_is_capped(self, make_instance):
-        instance = make_instance(
-            Handle,
-            cfg=SimpleNamespace(
-                config_file={"auto_final_fight_e": True, "auto_final_fight_e_cnt": 1}
-            ),
-            current_fighting_index=0,
-            fighting_count=1,
-            auto_final_fight_e_cnt=1,
-        )
-        actions = []
-        instance.handle_e = lambda value: actions.append("e")
-        instance.fighting = lambda: actions.append("fight")
-
-        instance.handle_fighting(1)
-
-        assert actions == ["fight"]
-
-
 class TestFightErrorCounting:
     def test_counts_only_fights_shorter_than_threshold(self, make_instance):
         instance = make_instance(Handle, error_fight_cnt=0, error_fight_threshold=3)
@@ -523,3 +449,301 @@ class TestHandleMove:
         handle.handle_move(0.4, "w")
         cpu_used = time.process_time() - cpu_before
         assert cpu_used < 0.15
+
+
+# ---------------------------------------------------------------------------
+# 战斗簇 —— Handle 里最大的一块（约 300 行），也是拆分的第一刀
+# ---------------------------------------------------------------------------
+
+
+class CombatImg:
+    """战斗路径用到的 img 替身，可按用例调整匹配值。"""
+
+    def __init__(self, main_ui=0.5, doubt=0.0, on_main=True, on_interface=True):
+        # 必须是 ndarray：fight_elapsed 会取 self.img.main_ui.shape
+        self.main_ui = np.zeros((4, 4, 3), np.uint8)
+        self.doubt_ui = np.zeros((4, 4, 3), np.uint8)
+        self._main_ui_val = main_ui
+        self._doubt_val = doubt
+        self._on_main = on_main
+        self._on_interface = on_interface
+        self.scans = []
+
+    def scan_screenshot(self, prepared, offset=(0, 0, 0, 0)):
+        self.scans.append(prepared)
+        return {"max_val": self._main_ui_val, "max_loc": (0, 0)}
+
+    def scan_temp_screenshot(self, prepared):
+        return {"max_val": self._doubt_val, "max_loc": (0, 0)}
+
+    def on_main_interface(self, *args, **kwargs):
+        return self._on_main
+
+    def on_interface(self, *args, **kwargs):
+        return self._on_interface
+
+    def take_screenshot(self, *args, **kwargs):
+        return ("frame", 0, 0, 10, 10)
+
+    def img_center_point(self, result, shape):
+        return (5, 6)
+
+    def click_target(self, *args, **kwargs):
+        return True
+
+
+class CombatMouse:
+    def __init__(self):
+        self.centers = []
+        self.clicks = []
+
+    def click(self, points, *args, **kwargs):
+        self.clicks.append(points)
+
+    def click_center(self):
+        self.centers.append(1)
+
+    def mouse_drag(self, *args, **kwargs):
+        pass
+
+
+@pytest.fixture
+def combat(make_instance, monkeypatch):
+    """一个只关心战斗逻辑的 Handle，不碰窗口、不碰键鼠。"""
+    monkeypatch.setattr(handle_module.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(handle_module.pyautogui, "press", lambda key: None)
+    monkeypatch.setattr(
+        handle_module.Img, "get_img", staticmethod(lambda path: np.zeros((4, 4, 3), np.uint8))
+    )
+    image = CombatImg()
+    mouse = CombatMouse()
+    instance = make_instance(
+        Handle,
+        cfg=SimpleNamespace(
+            config_file={
+                "auto_final_fight_e": False,
+                "auto_final_fight_e_cnt": 0,
+                "detect_fight_status_time": 0,
+                "allow_fight_e_buy_prop": False,
+            }
+        ),
+        img=image,
+        mouse_event=mouse,
+        current_fighting_index=0,
+        fighting_count=0,
+        auto_final_fight_e_cnt=0,
+        attack_once=False,
+        total_fight_cnt=0,
+        total_no_fight_cnt=0,
+        total_fight_time=0,
+        fight_in_map=False,
+        error_fight_cnt=0,
+        error_fight_threshold=3,
+        snack_used=0,
+    )
+    instance.image = image
+    instance.mouse = mouse
+    return instance
+
+
+class TestHandleFighting:
+    def test_rejects_unknown_value(self, combat):
+        with pytest.raises(CustomException):
+            combat.handle_fighting(3)
+
+    def test_value_two_clicks_at_cursor(self, combat, monkeypatch):
+        monkeypatch.setattr(win32api, "GetCursorPos", lambda: (11, 22))
+        combat.handle_fighting(2)
+        assert combat.mouse.clicks == [(11, 22)]
+
+    def test_last_fight_switches_to_e_when_enabled(self, combat):
+        combat.cfg = SimpleNamespace(
+            config_file={"auto_final_fight_e": True, "auto_final_fight_e_cnt": 3}
+        )
+        combat.fighting_count = 1
+        used = []
+        combat.handle_e = lambda value: used.append("e")
+        combat.fighting = lambda: used.append("fight")
+
+        combat.handle_fighting(1)
+
+        assert used == ["e"]
+        assert combat.current_fighting_index == 1
+        assert combat.auto_final_fight_e_cnt == 1
+
+    def test_non_last_fight_uses_normal_attack(self, combat):
+        combat.cfg = SimpleNamespace(
+            config_file={"auto_final_fight_e": True, "auto_final_fight_e_cnt": 3}
+        )
+        combat.fighting_count = 2
+        used = []
+        combat.handle_e = lambda value: used.append("e")
+        combat.fighting = lambda: used.append("fight")
+
+        combat.handle_fighting(1)
+
+        assert used == ["fight"]
+
+    def test_e_budget_is_capped(self, combat):
+        combat.cfg = SimpleNamespace(
+            config_file={"auto_final_fight_e": True, "auto_final_fight_e_cnt": 1}
+        )
+        combat.fighting_count = 1
+        combat.auto_final_fight_e_cnt = 1
+        used = []
+        combat.handle_e = lambda value: used.append("e")
+        combat.fighting = lambda: used.append("fight")
+
+        combat.handle_fighting(1)
+
+        assert used == ["fight"]
+
+
+class TestFightE:
+    def test_value_one_enters_combat_check(self, combat):
+        calls = []
+        combat.technique_points_dialog = lambda: calls.append("dialog")
+        combat.fight_elapsed = lambda: calls.append("elapsed") or True
+
+        combat.fight_e(1)
+
+        assert calls == ["dialog", "elapsed"]
+        assert combat.mouse.centers == [1], "使用 E 后应点击屏幕中心"
+
+    def test_value_two_skips_the_combat_check(self, combat):
+        calls = []
+        combat.technique_points_dialog = lambda: calls.append("dialog")
+        combat.fight_elapsed = lambda: calls.append("elapsed") or True
+
+        combat.fight_e(2)
+
+        assert calls == ["dialog"], "value=2 是地图内补 E，不该进入战斗判定"
+
+
+class TestTechniquePointsDialog:
+    def test_noop_when_on_main_interface(self, combat):
+        combat.image._on_main = True
+        combat.technique_points_dialog()
+        assert combat.image.scans == [], "在主界面时不该做任何识图"
+
+    def test_noop_when_dialog_not_detected(self, combat):
+        combat.image._on_main = False
+        combat.image._main_ui_val = 0.10  # eat.png 匹配不上
+        combat.technique_points_dialog()
+        assert combat.mouse.clicks == []
+
+    def test_cancels_when_buying_is_disabled(self, combat):
+        combat.image._on_main = False
+        combat.image._main_ui_val = 0.99  # 命中秘技点不足对话框
+        combat.image.click_target = lambda *a, **k: combat.mouse.clicks.append(a[0])
+
+        combat.technique_points_dialog()
+
+        assert combat.mouse.clicks == ["./picture/cancel.png"]
+
+    def test_taps_e_again_after_buying(self, combat, monkeypatch):
+        combat.cfg = SimpleNamespace(config_file={"allow_fight_e_buy_prop": True})
+        combat.image._on_main = False
+        combat.image._main_ui_val = 0.99
+        # 「无法购买」那一问要答 False，否则会走 pass 分支跳过购买
+        combat.image.on_interface = (
+            lambda *a, **k: k.get("interface_desc") != "无法购买"
+        )
+        combat.image.click_target = lambda *a, **k: True
+        pressed = []
+        monkeypatch.setattr(handle_module.pyautogui, "press", pressed.append)
+
+        combat.technique_points_dialog()
+        # 购买流程里的最后一步是补 E
+        assert pressed, "购买成功后应补按一次 E"
+
+
+class TestFightDetection:
+    def test_no_in_fight_status_true_when_round_icon_visible(self, combat):
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.99}
+        assert combat.no_in_fight_status() is True
+
+    def test_no_in_fight_status_false_when_round_icon_absent(self, combat):
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.5}
+        assert combat.no_in_fight_status() is False
+
+    def test_detect_returns_false_when_definitely_out_of_combat(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "no_in_fight_status", lambda: True)
+        assert combat.detect_fight_status(timeout=1) is False
+
+    def test_detect_returns_true_when_main_ui_disappears(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "no_in_fight_status", lambda: False)
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.1}
+        assert combat.detect_fight_status(timeout=5) is True
+
+    def test_detect_clicks_when_doubt_bubble_shows(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "no_in_fight_status", lambda: False)
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.95}
+        combat.image.scan_temp_screenshot = lambda *a, **k: {"max_val": 0.99}
+        acted = []
+        combat.click_action = lambda is_warning: acted.append(is_warning) or True
+
+        assert combat.detect_fight_status(timeout=5) is True
+        assert acted == [False]
+
+    def test_click_action_sleeps_then_attacks(self, combat):
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.1}
+
+        assert combat.click_action(is_warning=False) is True
+        assert combat.mouse.centers == [1]
+
+    def test_click_action_uses_one_attack(self, combat):
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.1}
+
+        combat.click_action(is_warning=False)
+        combat.click_action(is_warning=False)
+
+        assert combat.mouse.centers == [1], "attack_once 保证一轮判定里只点一次"
+
+    def test_fight_error_cnt_counts_only_short_fights(self, combat):
+        combat.fight_error_cnt(2)
+        combat.fight_error_cnt(3)
+        combat.fight_error_cnt(30)
+        assert combat.error_fight_cnt == 1
+
+
+class TestFightElapsed:
+    def test_returns_false_when_no_enemy_detected(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "detect_fight_status", lambda timeout: False)
+        assert combat.fight_elapsed() is False
+
+    def test_counts_a_completed_fight(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "detect_fight_status", lambda timeout: True)
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.99}
+        combat.image._on_main = True
+
+        assert combat.fight_elapsed() is True
+        assert combat.total_fight_cnt == 1
+        assert combat.total_fight_time >= 0
+
+    def test_short_fight_is_counted_as_error(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "detect_fight_status", lambda timeout: True)
+        combat.image.scan_screenshot = lambda *a, **k: {"max_val": 0.99}
+        combat.image._on_main = True
+        combat.error_fight_threshold = 999  # 任何用时都算"异常短"
+
+        combat.fight_elapsed()
+
+        assert combat.error_fight_cnt == 1
+
+
+class TestFighting:
+    def test_not_entering_combat_increments_counter(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "fight_elapsed", lambda: False)
+
+        combat.fighting()
+
+        assert combat.mouse.centers == [1]
+        assert combat.total_no_fight_cnt == 1
+
+    def test_entering_combat_does_not_increment_no_fight(self, combat, monkeypatch):
+        monkeypatch.setattr(combat, "fight_elapsed", lambda: True)
+
+        combat.fighting()
+
+        assert combat.total_no_fight_cnt == 0
