@@ -6,7 +6,7 @@
 这不是普通的 Python 项目，常规的 TDD / 分层经验需要改造后才成立。
 
 > 现状快照（2026-09）：`utils/` 已按 core / drivers / vision / flows / ui 分层，
-> 独立脚本收在 `tools/`；`handle.py` 已从 1173 行拆到 698 行；
+> 独立脚本收在 `tools/`；`handle.py` 已从 1173 行拆到 466 行（三簇全出）；
 > 129 处 `time.sleep`；44 处宽泛 `except`（含 5 处 `BaseException`）；
 > 15 个模块直接 import `win32*/pyautogui/pynput`；10 个直接 import `cv2`。
 > 分层本身已由 `tests/test_architecture.py` 强制；库耦合仍是棘轮，见 §2.3。
@@ -135,8 +135,9 @@ Fhoe-Rail/
 │  │  ├─ get_angle.py         #   箭头朝向
 │  │  └─ mini_asu.py          #   小地图方向
 │  ├─ flows/                  # 【编排层】
-│  │  ├─ handle.py            #   动作分发门面（698 行，仍在拆）
+│  │  ├─ handle.py            #   动作分发门面（466 行）
 │  │  ├─ combat.py            #   战斗判定与结算
+│  │  ├─ movement.py          #   移动、疾跑检测、系统卡顿识别
 │  │  ├─ orientation.py       #   视角设置 / 重置 / 旋转 / 校准
 │  │  ├─ map_operations.py    #   跑图主流程
 │  │  ├─ map.py               #   地图拖动 / 传送点查找
@@ -204,6 +205,12 @@ Fhoe-Rail/
   匹配与「找到图就点它」→ `vision/matcher.py`，`Img` 变成组合三者的门面。
   `MouseEvent` 相应退回纯输入层，`drivers/pause.py` 移到 `ui/`。
 
+- ✅ 拆 `Handle` 第三簇：移动 → `flows/movement.py`（`handle_move` 117 行 +
+  疾跑线程一族，含 2 个 async）。与战斗的交叉用注入 `combat` 解决；
+  `fight_in_map` 归 `Combat`。pynput 调用转经 `KeyboardEvent.press_key/release_key`，
+  因此名单没有增长。`handle.py` 698 → 466 行。
+
+  至此 `Handle` 从 1173 → 466 行，**棘轮名单没有一次因拆分而变长**。
 - ✅ 拆 `Handle` 第二簇：视角 → `flows/orientation.py`（编排）+
   `vision/arrow.py`（HSV 取箭头、360 度匹配）。**按职责而不是按调用关系切**：
   cv2 部分留在 vision，flows 不新增图像库依赖。`Handle` 698 行。
@@ -215,11 +222,10 @@ Fhoe-Rail/
 
 接下来：
 
-1. **拆 `flows/movement.py`**：`handle_move`（117 行）+ 疾跑线程一族。
-   它和战斗有交叉（`last_key == "e"` 分支会调 `technique_dialog` / `fight_elapsed`），
-   要把这个交叉理清再动 —— 注入 `Combat` 比注入 `handle_move` 更麻烦。
-2. **把剩余的 `win32api` / `pyautogui` 从 `flows/handle.py` 赶出去**（约 10 处，
-   主要在 `handle_esc` 与 `back_to_main`）。
+1. **把剩余的 `win32api` / `pyautogui` 从 `flows/handle.py` 赶出去**（约 10 处，
+   主要在 `handle_esc` 与 `back_to_main`）。做完 `handle.py` 就能出 OS 名单。
+2. **清 `flows/` 里剩下的 cv2 / pyautogui 跨层用法**：`calculated.py` /
+   `map.py` / `monthly_pass.py`。
 3. **给 `core/thresholds.py` 补实测来源**（§1.2 的那张表）。
    没有它，48 个常量仍然只能靠猜——这是目前最大的单项技术债。
 

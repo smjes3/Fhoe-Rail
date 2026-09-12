@@ -164,14 +164,14 @@ class TestResetRoundCount:
     def test_zeroes_per_round_handle_counters(self, game_map):
         reset_calls = []
         game_map.handle = SimpleNamespace(
-            tatol_save_time=99,
+            movement=SimpleNamespace(tatol_save_time=99),
             combat=SimpleNamespace(reset=lambda: reset_calls.append(1)),
         )
 
         game_map.reset_round_count()
 
         assert reset_calls == [1], "战斗计数由 combat 自己重置"
-        assert game_map.handle.tatol_save_time == 0
+        assert game_map.handle.movement.tatol_save_time == 0
 
 
 class TestDragSequences:

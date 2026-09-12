@@ -128,7 +128,7 @@ class MapOperations:
         self.show_dev_info(dev, map_json, 180, 1045, "map_name")
 
         # 初始化地图内意外战斗为未发生
-        self.handle.fight_in_map = False
+        self.handle.combat.fight_in_map = False
 
         self.process_single_map_start(index, map_json, dev)
 
@@ -364,7 +364,7 @@ class MapOperations:
         while dev_restart:
             dev_restart = False  # 不进行重开
             last_key = ""
-            self.handle.last_step_run = False  # 初始化上一次为走路
+            self.handle.movement.last_step_run = False  # 初始化上一次为走路
             for map_index, map_value in enumerate(map_data["map"]):
                 press_key = self.pause.check_pause(
                     dev=dev, last_point=last_point)
@@ -392,7 +392,7 @@ class MapOperations:
                 key, value = next(iter(map_value.items()))
 
                 # 每一步操作开始前，重置地图内意外战斗为未发生
-                self.handle.fight_in_map = False
+                self.handle.combat.fight_in_map = False
 
                 self.show_dev_info(
                     dev, f'"{key}": {value}', 900, 1045, "map_key_value")
@@ -445,7 +445,7 @@ class MapOperations:
                     self.map_statu.map_f_key_error.append(map_data_name)
                     break
 
-                if self.handle.fight_in_map and map_data_name not in self.map_statu.fight_in_map_list:
+                if self.handle.combat.fight_in_map and map_data_name not in self.map_statu.fight_in_map_list:
                     self.map_statu.fight_in_map_list.append(
                         f"{map_data_name}({map_progress_info})")
 

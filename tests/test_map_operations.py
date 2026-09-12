@@ -53,7 +53,10 @@ class RecordingHandle:
         self.fight_in_map = False
         self.last_step_run = False
         # 战斗计数归 handle.combat 持有（见 flows/combat.py）
-        self.combat = SimpleNamespace(fighting_count=0, current_fighting_index=0)
+        self.combat = SimpleNamespace(
+            fighting_count=0, current_fighting_index=0, fight_in_map=False
+        )
+        self.movement = SimpleNamespace(last_step_run=False)
 
     def __getattr__(self, name):
         if name not in HANDLE_METHODS:

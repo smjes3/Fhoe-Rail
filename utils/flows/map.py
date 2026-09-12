@@ -228,7 +228,7 @@ class Map:
         重置该锄地轮次相关的计数
         """
         self.handle.combat.reset()
-        self.handle.tatol_save_time = 0
+        self.handle.movement.tatol_save_time = 0
 
     def allow_map_drag(self, start):
         self.allow_drap_map_switch = bool(start.get("drag", False))  # 默认禁止拖动地图

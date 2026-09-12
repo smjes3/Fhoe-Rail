@@ -56,6 +56,7 @@ class Combat:
         self.error_fight_cnt = 0
         self.error_fight_threshold = 3  # 战斗时间小于此值记为「异常战斗」
         self.snack_used = 0
+        self.fight_in_map = False  # 地图内意外战斗
 
 
     def reset(self):

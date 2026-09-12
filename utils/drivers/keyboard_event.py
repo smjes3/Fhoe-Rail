@@ -35,6 +35,16 @@ class KeyboardEvent:
         return _KEY_MAP.get(key_name, key_name)
 
     @staticmethod
+    def press_key(key_name: str):
+        """按下不放。用于需要持续按住的方向键与 Shift。"""
+        KeyboardController().press(KeyboardEvent.translate_key(key_name))
+
+    @staticmethod
+    def release_key(key_name: str):
+        """释放按键。"""
+        KeyboardController().release(KeyboardEvent.translate_key(key_name))
+
+    @staticmethod
     def keyboard_press(key_name: str, delay: float = 0):
         """
         按下键盘后延迟抬起

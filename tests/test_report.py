@@ -18,11 +18,8 @@ def build_report(map_version="default", **statu_overrides):
         error_fight_threshold=3,
         error_fight_cnt=1,
     )
-    handle = SimpleNamespace(
-        tatol_save_time=12.5,
-        time_error_cnt=4,
-        combat=combat,
-    )
+    movement = SimpleNamespace(tatol_save_time=12.5, time_error_cnt=4)
+    handle = SimpleNamespace(movement=movement, combat=combat)
     mouse_event = SimpleNamespace(img_search_val_dict={"./picture/a.png": 0.42})
     map_info = SimpleNamespace(map_version=map_version)
     time_mgr = SimpleNamespace(format_time=TimeUtils.format_time)

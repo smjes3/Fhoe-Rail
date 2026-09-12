@@ -34,7 +34,7 @@ class Report:
 
         # 疾跑节约时间
         log.info(
-            f"疾跑节约的时间为 {self.time_mgr.format_time(self.handle.tatol_save_time)}")
+            f"疾跑节约的时间为 {self.time_mgr.format_time(self.handle.movement.tatol_save_time)}")
 
         # 地图信息
         log.info(
@@ -58,7 +58,7 @@ class Report:
             log.info("筑梦机关检查不通过，请将机关调整到正确的位置上")
 
         # 系统卡顿信息
-        log.info(f"系统卡顿次数：{self.handle.time_error_cnt}")
+        log.info(f"系统卡顿次数：{self.handle.movement.time_error_cnt}")
 
         # 黄泉模式异常战斗
         if self.map_info.map_version == "HuangQuan" and hasattr(self.map_statu, 'fight_in_map_list'):

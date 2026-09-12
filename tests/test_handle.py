@@ -11,11 +11,13 @@ import win32con
 from pynput.keyboard import Key as KeyboardKey
 
 import utils.flows.combat as combat_module
+import utils.flows.movement as movement_module
 import utils.flows.orientation as orientation_module
 import utils.vision.arrow as arrow_module
 import utils.flows.handle as handle_module
 from utils.core.exceptions import CustomException
 from utils.flows.combat import Combat
+from utils.flows.movement import Movement
 from utils.flows.orientation import Orientation
 from utils.flows.handle import Handle
 from utils.vision.img import Img
@@ -82,6 +84,39 @@ def handle(make_instance, monkeypatch):
     )
     instance.stop_check_sprint_task = lambda: None
     instance.controller = controller
+    return instance
+
+
+@pytest.fixture
+def movement(make_instance, monkeypatch):
+    """一个不依赖游戏窗口的 Movement。"""
+    keyboard = SimpleNamespace(pressed=[], released=[])
+    keyboard.press_key = keyboard.pressed.append
+    keyboard.release_key = keyboard.released.append
+    keyboard.keyboard_press = lambda key, delay=0: keyboard.pressed.append(key)
+    monkeypatch.setattr(movement_module, "KeyboardEvent", keyboard)
+    instance = make_instance(
+        Movement,
+        cfg=SimpleNamespace(config_file={"auto_run_in_map": False}),
+        img=SimpleNamespace(
+            switch_run="switch_run.png",
+            scan_screenshot=lambda *a, **k: {"max_val": 0.0},
+        ),
+        combat=SimpleNamespace(
+            fight_in_map=False,
+            technique_points_dialog=lambda: None,
+            fight_elapsed=lambda: True,
+        ),
+        thread_check_sprint=None,
+        running=False,
+        run_fix_time=0,
+        run_fixed=False,
+        last_step_run=False,
+        tatol_save_time=0,
+        time_error_cnt=0,
+    )
+    instance.stop_check_sprint_task = lambda: None
+    instance.keyboard = keyboard
     return instance
 
 
@@ -351,7 +386,7 @@ class TestCalAng:
 
 class TestIsRunning:
     def test_threshold_is_high(self, make_instance):
-        instance = make_instance(Handle)
+        instance = make_instance(Movement)
         instance.img = SimpleNamespace(
             switch_run="img", scan_screenshot=lambda *a, **k: {"max_val": 0.997}
         )
@@ -369,7 +404,7 @@ class TestSprintTaskLifecycle:
             def is_alive(self):
                 return True
 
-        instance = make_instance(Handle, thread_check_sprint=Alive(), running=False)
+        instance = make_instance(Movement, thread_check_sprint=Alive(), running=False)
 
         instance.start_check_sprint_task()
 
@@ -386,7 +421,7 @@ class TestSprintTaskLifecycle:
             def join(self):
                 joined.append(1)
 
-        instance = make_instance(Handle, thread_check_sprint=Thread(), running=True)
+        instance = make_instance(Movement, thread_check_sprint=Thread(), running=True)
 
         instance.stop_check_sprint_task()
 
@@ -395,51 +430,52 @@ class TestSprintTaskLifecycle:
         assert instance.thread_check_sprint is None
 
     def test_enable_run_presses_shift_only_when_needed(self, make_instance, monkeypatch):
-        controller = StubController()
-        monkeypatch.setattr(handle_module, "KeyboardController", lambda: controller)
-        instance = make_instance(Handle)
+        keyboard = SimpleNamespace(pressed=[])
+        keyboard.press_key = keyboard.pressed.append
+        monkeypatch.setattr(movement_module, "KeyboardEvent", keyboard)
+        instance = make_instance(Movement)
 
         instance.is_running = lambda: True
         instance.enable_run()
-        assert controller.pressed == [], "已经在疾跑时不应重复按 Shift"
+        assert keyboard.pressed == [], "已经在疾跑时不应重复按 Shift"
 
         instance.is_running = lambda: False
         instance.enable_run()
-        assert controller.pressed == [KeyboardKey.shift]
+        assert keyboard.pressed == ["shift"]
 
 
 class TestHandleMove:
-    def test_releases_direction_and_shift_keys_on_error(self, handle, monkeypatch):
+    def test_releases_direction_and_shift_keys_on_error(self, movement, monkeypatch):
         """移动循环里抛异常时，方向键与 Shift 必须被释放，否则键盘会卡住。"""
 
         def boom(*args, **kwargs):
             raise RuntimeError("循环中失败")
 
-        monkeypatch.setattr(handle, "move_run_fix", boom)
+        monkeypatch.setattr(movement, "move_run_fix", boom)
 
         with pytest.raises(RuntimeError):
-            handle.handle_move(0.5, "w")
+            movement.handle_move(0.5, "w")
 
-        assert "w" in handle.controller.released
-        assert KeyboardKey.shift in handle.controller.released
+        assert "w" in movement.keyboard.released
+        assert "shift" in movement.keyboard.released
 
-    def test_releases_keys_on_normal_completion(self, handle):
-        handle.handle_move(0.1, "w")
-        assert "w" in handle.controller.released
-        assert KeyboardKey.shift in handle.controller.released
+    def test_releases_keys_on_normal_completion(self, movement):
+        movement.handle_move(0.1, "w")
+        assert "w" in movement.keyboard.released
+        assert "shift" in movement.keyboard.released
 
-    def test_presses_the_requested_key(self, handle):
-        handle.handle_move(0.1, "a")
-        assert "a" in handle.controller.pressed
+    def test_presses_the_requested_key(self, movement):
+        movement.handle_move(0.1, "a")
+        assert "a" in movement.keyboard.pressed
 
     @pytest.mark.xfail(
         strict=True,
         reason="计时循环体内没有任何 time.sleep：疾跑分支触发后（或关闭疾跑时），"
         "三个 elif 条件全部为假，剩余的等待时间变成 100% CPU 忙等",
     )
-    def test_does_not_burn_cpu_while_waiting(self, handle):
+    def test_does_not_burn_cpu_while_waiting(self, movement):
         cpu_before = time.process_time()
-        handle.handle_move(0.4, "w")
+        movement.handle_move(0.4, "w")
         cpu_used = time.process_time() - cpu_before
         assert cpu_used < 0.15
 
