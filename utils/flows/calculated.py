@@ -2,12 +2,11 @@ import os
 import time
 from datetime import datetime
 
-import pyautogui
-from pynput.keyboard import Controller as KeyboardController
 
 from utils.vision.blackscreen import BlackScreen
 from utils.config.config import ConfigurationManager
 from utils.flows.handle import Handle
+from utils.drivers.keyboard_event import KeyboardEvent
 from utils.vision import colors as color
 from utils.vision.img import Img
 from utils.core.log import log
@@ -33,7 +32,6 @@ class Calculated:
         self.mouse_event = MouseEvent()
         self._config = None
         self._last_updated = None
-        self.keyboard = KeyboardController()
         self.handle = Handle()
         self.asu = ASU()
         self.blackscreen = BlackScreen()
@@ -171,5 +169,5 @@ class Calculated:
         log.info("开始判断1号位")
         image, *_ = self.img.take_screenshot(offset=(1670, 339, -160, -739))
         if color.any_pixel_in_ranges(image, color.FIRST_ROLE_RANGES):
-            pyautogui.press("1")
+            KeyboardEvent.keyboard_press("1")
             log.info("设置1号位为跑图角色")

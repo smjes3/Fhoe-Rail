@@ -83,9 +83,7 @@ class TestFirstRoleCheck:
             take_screenshot=lambda **kwargs: (image, 0, 0, 20, 20)
         )
         pressed = []
-        monkeypatch.setattr(
-            calculated_module.pyautogui, "press", lambda key: pressed.append(key)
-        )
+        monkeypatch.setattr(calculated_module, "KeyboardEvent", SimpleNamespace(keyboard_press=lambda key, delay=0: pressed.append(key)))
 
         computed.first_role_check()
 
@@ -98,9 +96,7 @@ class TestFirstRoleCheck:
             take_screenshot=lambda **kwargs: (image, 0, 0, 20, 20)
         )
         pressed = []
-        monkeypatch.setattr(
-            calculated_module.pyautogui, "press", lambda key: pressed.append(key)
-        )
+        monkeypatch.setattr(calculated_module, "KeyboardEvent", SimpleNamespace(keyboard_press=lambda key, delay=0: pressed.append(key)))
 
         computed.first_role_check()
 

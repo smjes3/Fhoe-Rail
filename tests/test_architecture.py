@@ -65,9 +65,6 @@ VISION_LIBS = {"cv2"}
 # 名单只登记**跨层**违规。
 OS_INPUT_ALLOWLIST = {
     "fhoe.py",
-    f"{FLOWS}/calculated.py",
-    f"{FLOWS}/map.py",
-    f"{FLOWS}/map_operations.py",
     f"{VISION}/get_angle.py",
     f"{UI}/pause.py",
     f"{UI}/record.py",

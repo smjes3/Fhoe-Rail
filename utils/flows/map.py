@@ -1,10 +1,10 @@
 import time
 
-import pyautogui
 
 from utils.vision.blackscreen import BlackScreen
 from utils.config.config import ConfigurationManager
 from utils.flows.handle import Handle
+from utils.drivers.keyboard_event import KeyboardEvent
 from utils.vision.img import Img
 from utils.core.map_info import MapInfo
 from utils.flows.monthly_pass import MonthlyPass
@@ -65,7 +65,7 @@ class Map:
         # 主逻辑
         while attempts < max_attempts:
             log.info(f"尝试打开地图 (尝试次数: {attempts + 1}/{max_attempts})")
-            pyautogui.press(self.open_map_btn)
+            KeyboardEvent.keyboard_press(self.open_map_btn)
             time.sleep(0.05)
             self._wait_for_main_interface(speed_open, start_time)
             speed_open = True
@@ -334,7 +334,7 @@ class Map:
                 orientation_delay = min(orientation_delay, 4)
                 time.sleep(orientation_delay)
                 if self.blackscreen.check_blackscreen():
-                    pyautogui.press("esc")
+                    KeyboardEvent.keyboard_press("esc")
                     time.sleep(2)
                     orientation_delay += 0.5
                 else:
@@ -409,7 +409,7 @@ class Map:
             if result_back["max_val"] > MAP_BACK:
                 log.info("找到返回键")
                 points_back = self.img.img_center_point(result_back, target_back.shape)
-                pyautogui.click(points_back, clicks=1, interval=0.1)
+                self.mouse_event.click(points_back)
             else:
                 break
 
@@ -423,11 +423,11 @@ class Map:
                     return
                 if not speed_open:
                     log.info("按下s打断技能")
-                    pyautogui.keyDown("s")
-                    pyautogui.press(self.open_map_btn)
+                    KeyboardEvent.press_key("s")
+                    KeyboardEvent.keyboard_press(self.open_map_btn)
                     time.sleep(0.05)
         finally:
-            pyautogui.keyUp("s")
+            KeyboardEvent.release_key("s")
         return
 
     def _handle_target_recognition(self, target):
@@ -441,7 +441,7 @@ class Map:
             log.info(f"识别点位{points}，匹配度{result['max_val']:.3f}")
             if not self.map_statu_minimize:
                 log.info(f"地图最小化，识别图片匹配度{result['max_val']:.3f}")
-                pyautogui.click(points, clicks=10, interval=0.1)
+                self.mouse_event.click(points, clicks=10)
                 self.map_statu_minimize = True
             return True
         return False

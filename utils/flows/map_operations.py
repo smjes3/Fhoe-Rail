@@ -4,12 +4,12 @@
 import datetime
 import time
 
-import pyautogui
 
 from utils.flows.calculated import Calculated
 from utils.config.config import ConfigurationManager
 from utils.ui.text_window import show_text, start_tkinter_thread, TEXT_WINDOWS
 from utils.flows.handle import Handle
+from utils.drivers.keyboard_event import KeyboardEvent
 from utils.vision.img import Img
 from utils.core.log import log
 from utils.core.thresholds import (
@@ -234,7 +234,7 @@ class MapOperations:
                 elif key == "blackscreen":
                     self.calculated.run_mapload_check()  # 强制执行地图加载检测
                 elif key == "esc":
-                    pyautogui.press('esc')
+                    KeyboardEvent.keyboard_press("esc")
                 elif key == 'map':
                     self.map.open_map()
                 elif key == 'main':
@@ -249,7 +249,7 @@ class MapOperations:
                 elif key in ["w", "a", "s", "d"]:
                     self.handle.handle_move(value, key)
                 elif key in ["F4"]:
-                    pyautogui.press(key)
+                    KeyboardEvent.keyboard_press(key)
                 elif key == "f":
                     self.handle.handle_f(value)
                 elif key == "picture\\max.png":

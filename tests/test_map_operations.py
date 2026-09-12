@@ -551,9 +551,7 @@ class TestStartStepDispatch:
     @pytest.fixture
     def run(self, operations, monkeypatch):
         pressed = []
-        monkeypatch.setattr(
-            operations_module.pyautogui, "press", lambda key: pressed.append(key)
-        )
+        monkeypatch.setattr(operations_module, "KeyboardEvent", SimpleNamespace(keyboard_press=lambda key, delay=0: pressed.append(key)))
 
         def _run(entry, planet_png_lst=(), allow_buy=True, click_ok=True):
             pressed.clear()

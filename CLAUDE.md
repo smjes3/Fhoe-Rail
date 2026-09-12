@@ -238,11 +238,16 @@ Fhoe-Rail/
   **VISION 名单已清空（10 → 0）**，于是这条从棘轮升级成硬规则
   （`TestVisionIsolation`，没有豁免名单）。至此 `flows/` 与 `ui/` 下不再出现 cv2。
 
-接下来：
+- ✅ 清 `flows/` 剩余的直接 OS 调用：`map.py` / `calculated.py` /
+  `map_operations.py` 的 `pyautogui.press` / `keyDown` / `keyUp` / `click` 全部
+  转经 `KeyboardEvent` / `MouseEvent`。**`flows/` 下已无任何 OS 库直接依赖**，
+  OS 名单 7 → 4 条。
 
-1. **清 `flows/` 剩余的直接 OS 调用**：`map.py` / `calculated.py` /
-   `map_operations.py` 还在用 `pyautogui`（主要是 `press("esc")` 一类）。
-   做完 OS 名单只剩监听/热键那几条（`get_angle` / `pause` / `record` / `fhoe`）。
+  剩下的 4 条性质不同，不是同一类债：`get_angle.py`（pynput 截图）、
+  `ui/pause.py`（keyboard 热键）、`ui/record.py`（pynput 录制）、`fhoe.py`（入口）。
+  它们各自就是"监听设备"的本职，要动得单独设计，不该硬塞进 drivers。
+
+至此 `CLAUDE.md` 的迁移清单走完。
 2. **清 `flows/` 里剩下的 cv2 / pyautogui 跨层用法**：`calculated.py` /
    `map.py` / `monthly_pass.py`。
 3. **给 `core/thresholds.py` 逐条补余量标注**（§1.2 的那张表）。
