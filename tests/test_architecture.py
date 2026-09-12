@@ -61,6 +61,8 @@ VISION_LIBS = {"cv2"}
 
 # 理想态：只有 drivers/ 直接碰 OS 输入与窗口。
 # 现状：flows/ 与 vision/、ui/ 里还有直接调用，迁移顺序见 CLAUDE.md §2.3。
+# 注意：drivers/ 下的模块不算"债务" —— 那层存在的理由就是碰 OS，所以不登记。
+# 名单只登记**跨层**违规。
 OS_INPUT_ALLOWLIST = {
     "fhoe.py",
     f"{FLOWS}/calculated.py",
@@ -70,21 +72,12 @@ OS_INPUT_ALLOWLIST = {
     f"{VISION}/get_angle.py",
     f"{UI}/pause.py",
     f"{UI}/record.py",
-    f"{DRIVERS}/keyboard_event.py",
-    f"{DRIVERS}/mouse_event.py",
-    f"{DRIVERS}/screen.py",
-    f"{DRIVERS}/window.py",
 }
 
 # 理想态：只有 vision/ 直接 import cv2。
+# 同理，vision/ 下的模块 import cv2 是本职，不登记。
 VISION_ALLOWLIST = {
-    f"{VISION}/blackscreen.py",
-    f"{VISION}/get_angle.py",
-    f"{VISION}/images.py",
-    f"{VISION}/matcher.py",
-    f"{VISION}/mini_asu.py",
     f"{FLOWS}/calculated.py",
-    f"{FLOWS}/handle.py",
     f"{FLOWS}/map.py",
     f"{FLOWS}/monthly_pass.py",
     f"{UI}/pause.py",
@@ -242,6 +235,7 @@ class TestOsCouplingRatchet:
             path
             for path, source in source_files()
             if imported_top_level_modules(source) & OS_INPUT_LIBS
+            and layer_of(path) != DRIVERS
             and path not in OS_INPUT_ALLOWLIST
         )
         assert offenders == [], (
@@ -255,6 +249,7 @@ class TestOsCouplingRatchet:
             path
             for path, source in source_files()
             if imported_top_level_modules(source) & OS_INPUT_LIBS
+            and layer_of(path) != DRIVERS
         }
         stale = sorted(OS_INPUT_ALLOWLIST - violating)
         assert stale == [], f"这些文件已不再直接依赖 OS 输入库，请从名单中移除：{stale}"
@@ -268,6 +263,7 @@ class TestVisionCouplingRatchet:
             path
             for path, source in source_files()
             if imported_top_level_modules(source) & VISION_LIBS
+            and layer_of(path) != VISION
             and path not in VISION_ALLOWLIST
         )
         assert offenders == [], (
@@ -281,6 +277,7 @@ class TestVisionCouplingRatchet:
             path
             for path, source in source_files()
             if imported_top_level_modules(source) & VISION_LIBS
+            and layer_of(path) != VISION
         }
         stale = sorted(VISION_ALLOWLIST - violating)
         assert stale == [], f"这些文件已不再依赖 cv2，请从名单中移除：{stale}"

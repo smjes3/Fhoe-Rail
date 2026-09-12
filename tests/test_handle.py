@@ -11,9 +11,12 @@ import win32con
 from pynput.keyboard import Key as KeyboardKey
 
 import utils.flows.combat as combat_module
+import utils.flows.orientation as orientation_module
+import utils.vision.arrow as arrow_module
 import utils.flows.handle as handle_module
 from utils.core.exceptions import CustomException
 from utils.flows.combat import Combat
+from utils.flows.orientation import Orientation
 from utils.flows.handle import Handle
 from utils.vision.img import Img
 from utils.vision.matcher import Matcher
@@ -326,9 +329,9 @@ class TestHandleClickFloor:
 
 class TestViewHelpers:
     def test_handle_view_set_stores_reference_arrow(self, make_instance, monkeypatch):
-        monkeypatch.setattr(handle_module, "time", TickingTime())
-        instance = make_instance(Handle)
-        instance.take_arrow = lambda: "ARROW"
+        monkeypatch.setattr(orientation_module.time, "sleep", lambda seconds: None)
+        monkeypatch.setattr(orientation_module.arrow, "take_arrow", lambda img: "ARROW")
+        instance = make_instance(Orientation, img=None, arrow_begin=None)
 
         instance.handle_view_set(0.1)
 
@@ -338,15 +341,12 @@ class TestViewHelpers:
 class TestCalAng:
     def test_identical_arrow_is_zero_degrees(self, make_instance):
         """同一张图旋转 0 度时归一化相关为 1，应判定为 0 度。"""
-        # cal_ang 走 Img 门面 -> Matcher.image_rotate，所以这里给一个真的 Matcher
-        instance = make_instance(
-            Handle,
-            img=make_instance(Matcher, screen=None, ui_images={}, _mouse=object()),
-        )
-        arrow = np.zeros((25, 25, 3), dtype=np.uint8)
-        arrow[8:17, 11:14] = 255
+        # cal_ang 用 Img 门面做旋转，所以这里给一个真的 Matcher
+        img = make_instance(Matcher, screen=None, ui_images={}, _mouse=object())
+        shape = np.zeros((25, 25, 3), dtype=np.uint8)
+        shape[8:17, 11:14] = 255
 
-        assert instance.cal_ang(arrow, arrow) == 0
+        assert arrow_module.cal_ang(img, shape, shape) == 0
 
 
 class TestIsRunning:

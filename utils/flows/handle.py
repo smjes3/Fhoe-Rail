@@ -5,8 +5,6 @@ import random
 import threading
 import time
 
-import cv2
-import numpy as np
 import pyautogui
 from pynput.keyboard import Controller as KeyboardController
 from pynput.keyboard import Key as KeyboardKey
@@ -16,31 +14,18 @@ import win32con
 from utils.config.config import ConfigurationManager
 from utils.core.exceptions import CustomException
 from utils.flows.combat import Combat
+from utils.flows.orientation import Orientation
 from utils.vision.img import Img
 from utils.drivers.keyboard_event import KeyboardEvent
 from utils.core.log import log
 from utils.core.thresholds import (
-    ACTION_BAR,
-    AUTO_OFF_ICON,
     BATTLE_ESC_CHECK,
-    CANCEL_BUTTON,
-    CONTINUE_FIGHTING,
-    DEFEAT,
-    DOUBT_ICON,
     F_ICON,
-    MAIN_INTERFACE,
-    MAIN_INTERFACE_STRICT,
-    QIQIAO_ICON,
-    QIQIAO_LAB,
-    ROUND_DISABLE,
-    ROUND_ICON,
     SETTING_CONFIRM,
     SETTING_ICON,
     SETTING_OPTION,
-    SNACK_CRAFT_BUTTON,
     SPRINT_ICON,
     TECHNIQUE_CONSUMABLE,
-    TECHNIQUE_DIALOG,
 )
 from utils.drivers.mouse_event import MouseEvent
 from utils.core.singleton import SingletonMeta
@@ -54,7 +39,6 @@ class Handle(metaclass=SingletonMeta):
         self.cfg = ConfigurationManager()
         self.window = Window()
 
-        self.arrow_begin = None  # 初始箭头
         self.run_fix_time = 0  # 强制断开疾跑时间
         self.run_fixed = False  # 强制断开疾跑标志
         self.last_step_run = False  # 初始化
@@ -66,16 +50,18 @@ class Handle(metaclass=SingletonMeta):
 
         self.f_key_error = False  # F键错误
 
-        self.multi_config = 1.0
-
         self.running = False
         self.thread_cancel_sprint = None  # 用于保存取消疾跑任务的线程
         self.thread_check_sprint = None  # 用于保存检测疾跑任务的线程
 
-        self.arrow_0 = Img.get_img("./picture/screenshot_arrow.png")
 
         #: 战斗判定与结算（见 flows/combat.py）
         self.combat = Combat(self.cfg, self.img, self.mouse_event)
+
+        #: 视角校准（见 flows/orientation.py；识别部分在 vision/arrow.py）
+        self.orientation = Orientation(
+            self.cfg, self.img, self.mouse_event, self.handle_move
+        )
 
     def handle_space(self, value, key):
         """按下space键，延迟value秒后抬起"""
@@ -355,171 +341,8 @@ class Handle(metaclass=SingletonMeta):
         self.back_to_main(delay=0.1)
         time.sleep(2)
 
-    def handle_view_set(self, value):
-        """设置初始视角"""
-        time.sleep(value)
-        self.arrow_begin = self.take_arrow()
-
-    def handle_view_reset(self, value):
-        """重置视角"""
-        time.sleep(value)
-        sub = 0
-        cnt = 0
-        self.handle_move(value=0.01, key="w")  # 重置箭头指向为视角方向
-        time.sleep(0.6)
-        while cnt < 4:
-            arrow_temp = self.take_arrow()
-            ang = self.cal_ang(arrow_temp, self.arrow_begin)
-            sub = 360 - ang
-            sub = (sub + 180) % 360 - 180
-            sub = sub if sub != 0 else 1e-9
-            log.info(f"开始重置视角，计算角度ang:{ang}，旋转角度sub:{sub}")
-            # KeyboardEvent.keyboard_press("caps_lock", 0.2)
-            # time.sleep(1)
-            self.mouse_event.mouse_move(sub)
-            self.handle_move(value=0.01, key="w")
-            cnt += 1
-            if abs(sub) <= 1:
-                break
-            time.sleep(0.6)
-
-    def cal_ang(self, arrow_img, arrow_begin_img):
-        """计算与初始蓝色箭头相差的角度"""
-        mx_acc = 0
-        ang = 0
-        for i in range(360):
-            rt = self.img.image_rotate(arrow_img, i)
-            result = cv2.matchTemplate(arrow_begin_img, rt, cv2.TM_CCORR_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-            if max_val > mx_acc:
-                mx_acc = max_val
-                mx_loc = (max_loc[0] + 12, max_loc[1] + 12)
-                ang = i
-
-        return ang
-
     # 不同电脑鼠标移动速度、放缩比、分辨率等不同，因此需要校准
     # 基本逻辑：每次正反转60度，然后计算实际转了几度，计算出误差比
-
-    def set_angle(self, ang=None):
-        """校准视角旋转"""
-        if ang is None:
-            ang = [1, 1, 3]
-
-        log.info("开始校准")
-        move_list = [60, -60]
-        offset_list = []
-
-        for move_num in move_list:
-            self.handle_move(0.01, "w")
-            time.sleep(0.6)
-            self.handle_view_set(0.1)
-            init_ang = self.cal_ang(self.arrow_begin, self.arrow_begin)
-            log.debug(f"init_ang: {init_ang}")
-            last_ang = init_ang
-
-            for repeat in ang:
-                if last_ang != init_ang and repeat == 1:
-                    continue
-
-                ang_list = []
-                for _ in range(repeat):
-                    self.mouse_event.mouse_move(move_num, fine=3 // repeat, align=True)
-                    time.sleep(0.2)
-                    self.handle_move(0.01, "w")
-                    time.sleep(0.6)
-                    arrow_temp = self.take_arrow()
-                    now_ang = self.cal_ang(arrow_temp, self.arrow_begin)
-                    log.debug(f"now_ang: {now_ang}")
-                    sub = now_ang - last_ang
-                    sub = (
-                        sub + 360
-                        if (move_num >= 0 and sub < 0)
-                        else sub - 360
-                        if (move_num < 0 and sub > 0)
-                        else sub
-                    )
-                    ang_list.append(sub)
-                    last_ang = now_ang
-
-                valid_angles = [
-                    a for a in ang_list if abs(a - np.median(ang_list)) <= 5
-                ]
-                if valid_angles:
-                    ax = sum([move_num for _ in valid_angles])
-                    ay = sum(valid_angles)
-
-                    if ay != 0:
-                        offset_list.append(ax / ay)
-                    else:
-                        log.info("疑似校准错误")
-                        offset_list.append(1)
-
-        if offset_list:
-            self.multi_config = np.median(offset_list)
-            self.cfg.modify_json_file(
-                filename=self.cfg.CONFIG_FILE_NAME,
-                key="angle",
-                value=str(self.multi_config),
-            )
-            self.cfg.modify_json_file(
-                filename=self.cfg.CONFIG_FILE_NAME, key="angle_set", value=True
-            )
-            log.info(f"校准完成，angle: {self.multi_config}")
-        else:
-            log.info("校准失败")
-
-        time.sleep(1)
-
-    def handle_view_rotate(self, value):
-        """
-        旋转视角至value度，顺时针
-        """
-        time.sleep(1)
-        sub = 0
-        cnt = 0
-        self.handle_move(value=0.01, key="w")  # 重置箭头指向为视角方向
-        time.sleep(0.6)
-        arrow_temp = self.arrow_0
-        final_arrow = self.img.image_rotate(arrow_temp, -value)
-        while cnt < 4:
-            arrow_temp = self.take_arrow()
-            ang = self.cal_ang(arrow_temp, final_arrow)
-            sub = 360 - ang
-            sub = (sub + 180) % 360 - 180
-            sub = sub if sub != 0 else 1e-9
-            log.info(f"开始旋转视角，计算角度ang:{ang}，旋转角度sub:{sub}")
-            # KeyboardEvent.keyboard_press("caps_lock", 0.2)
-            # time.sleep(1)
-            self.mouse_event.mouse_move(sub)
-            self.handle_move(value=0.01, key="w")
-            cnt += 1
-            if abs(sub) <= 1:
-                break
-            time.sleep(0.6)
-
-    def take_arrow(self):
-        """
-        截取小地图蓝色箭头，进行HSV颜色过滤
-        """
-        img = self.take_screenshot_arrow()
-        # 转换到HSV颜色空间
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        lower_blue = np.array([93, 120, 60])
-        upper_blue = np.array([97, 255, 255])
-        mask = cv2.inRange(hsv, lower_blue, upper_blue)
-        result_img = cv2.bitwise_and(img, img, mask=mask)
-
-        return result_img
-
-    def take_screenshot_arrow(self):
-        """
-        截取小地图蓝色箭头
-        """
-        # 小地图中心 460-320=140,345-194=151
-        screenshot = self.img.take_screenshot(offset=(125, 136, -1765, -914))[0]
-
-        return screenshot
 
     def scroll(self, clicks: float):
         """
@@ -832,6 +655,24 @@ class Handle(metaclass=SingletonMeta):
         """按下 e 键。"""
         return self.combat.handle_e(value)
 
+
+    # --- 视角：委派给 self.orientation（见 flows/orientation.py）---------------
+
+    def handle_view_set(self, value):
+        """设置初始视角。"""
+        return self.orientation.handle_view_set(value)
+
+    def handle_view_reset(self, value):
+        """重置视角。"""
+        return self.orientation.handle_view_reset(value)
+
+    def handle_view_rotate(self, value):
+        """旋转视角至 value 度。"""
+        return self.orientation.handle_view_rotate(value)
+
+    def set_angle(self, ang=None):
+        """校准视角旋转。"""
+        return self.orientation.set_angle(ang)
 
     def handle_await(self, value):
         """
